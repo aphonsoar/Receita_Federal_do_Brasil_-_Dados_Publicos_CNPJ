@@ -70,7 +70,6 @@ print('Baixando layout:')
 wget.download(Layout, out=output_files, bar=bar_progress)
 
 ####################################################################################################################################################
-
 #%%
 # Creating directory to store the extracted files:
 dir = os.path.join(output_files+'\\Extracted_files')
@@ -147,6 +146,7 @@ database='Dados_RFB'
 engine = create_engine('postgresql://'+user+':'+passw+'@'+host+':'+port+'/'+database)
 conn = psycopg2.connect('dbname='+database+' '+'user='+user+' '+'host='+host+' '+'password='+passw)
 cur = conn.cursor()
+
 #%%
 # Arquivos de empresa:
 empresa_insert_start = time.time()
