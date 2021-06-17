@@ -25,6 +25,7 @@ Nesse repositório consta um processo de ETL para **i)** baixar os arquivos; **i
   - sqlalchemy
   - psycopg2
   - time
+  - sys
 
 
 - Banco de dados:
