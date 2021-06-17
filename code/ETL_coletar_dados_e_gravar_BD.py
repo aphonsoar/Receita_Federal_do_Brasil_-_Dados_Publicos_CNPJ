@@ -11,6 +11,7 @@ import zipfile
 from sqlalchemy import create_engine
 import psycopg2
 import time
+import sys
 
 #%%
 dados_rf = 'http://200.152.38.155/CNPJ/'
