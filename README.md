@@ -11,31 +11,13 @@ Nesse repositório consta um processo de ETL para **i)** baixar os arquivos; **i
 ---------------------
 
 ### Infraestrutura necessária:
-- Python 3.8 - libraries:
-  - wget 
-  - pandas
-  - ftplib 
-  - datetime
-  - gzip
-  - urllib
-  - bs4
-  - re
-  - os
-  - zipfile
-  - sqlalchemy
-  - psycopg2
-  - time
-  - sys
-
-
-- Banco de dados:
-  - [PostgreSQL 13](https://www.postgresql.org/download/)
+- [Python 3.8](https://www.python.org/downloads/release/python-3810/)
+- [PostgreSQL 13](https://www.postgresql.org/download/)
   
 ---------------------
 
 ### How to use:
 1. Com o Postgre instalado, inicie a instância do servidor (pode ser local) e crie o banco de dados conforme o arquivo `banco_de_dados.sql`.
-
 
 2. Conforme o seu ambiente, substitua as variáveis abaixo no arquivo `ETL_coletar_dados_e_gravar_BD.py`:
    - `output_files`: diretório de destino para o donwload dos arquivos
@@ -45,9 +27,13 @@ Nesse repositório consta um processo de ETL para **i)** baixar os arquivos; **i
    - `port`: porta da conexão com o BD 
    - `database`: nome da base de dados na instância (`Dados_RFB` - conforme arquivo `banco_de_dados.sql`)
 
+3. Instale as bibliotecas necessárias, disponíveis em `requirements.txt`:
+```
+pip install -r requirements.txt
+```
 
-3. Executar o arquivo `ETL_coletar_dados_e_gravar_BD.py` e aguardar a finalização do processo.
-   - Os arquivos são grandes: dependendo da infraestrutura isso deve levar muitas horas para conclusão.
+4. Execute o arquivo `ETL_coletar_dados_e_gravar_BD.py` e aguarde a finalização do processo.
+   - Os arquivos são grandes. Dependendo da infraestrutura isso deve levar muitas horas para conclusão.
    - Arquivos de 08/05/2021: `4,68 GB` compactados e `17,1 GB` descompactados.
     
 ---------------------
