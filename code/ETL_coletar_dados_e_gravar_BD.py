@@ -16,7 +16,7 @@ import wget
 import zipfile
 
 #%%
-def getenv(env):
+def getEnv(env):
     os.getenv(env)
 
 load_dotenv()
