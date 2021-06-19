@@ -1,22 +1,23 @@
-import wget
-import pandas as pd
-import ftplib
 from datetime import date
-import gzip
-import urllib.request
-import bs4 as bs
-import re
-import os
-import zipfile
+from pathlib import Path
 from sqlalchemy import create_engine
+import bs4 as bs
+import ftplib
+import gzip
+import os
+import pandas as pd
 import psycopg2
-import time
+import re
 import sys
+import time
+import urllib.request
+import wget
+import zipfile
 
 #%%
 dados_rf = 'http://200.152.38.155/CNPJ/'
-output_files = "C:\\Aphonso\\Dados_RFB\\"
-
+output_files = Path('C:/Aphonso/Dados_RFB')
+extracted_files = Path(output_files / 'Extracted_files')
 raw_html = urllib.request.urlopen(dados_rf)
 raw_html = raw_html.read()
 
@@ -73,9 +74,8 @@ wget.download(Layout, out=output_files, bar=bar_progress)
 ####################################################################################################################################################
 #%%
 # Creating directory to store the extracted files:
-dir = os.path.join(output_files+'\\Extracted_files')
-if not os.path.exists(dir):
-    os.mkdir(dir)
+if not os.path.exists(extracted_files):
+    os.mkdir(extracted_files)
 
 # Extracting files:
 i_l = 0
@@ -84,8 +84,8 @@ for l in Files:
         i_l += 1
         print('Descompactando arquivo:')
         print(str(i_l) + ' - ' + l)
-        with zipfile.ZipFile(output_files+l, 'r') as zip_ref:
-            zip_ref.extractall(output_files+'Extracted_files')
+        with zipfile.ZipFile(output_files / l, 'r') as zip_ref:
+            zip_ref.extractall(extracted_files)
     except:
         pass
 
@@ -96,8 +96,7 @@ for l in Files:
 insert_start = time.time()
 
 # Files:
-dir = output_files+'Extracted_files'
-Items = [name for name in os.listdir(dir) if name.endswith('')]
+Items = [name for name in os.listdir(extracted_files) if name.endswith('')]
 
 # Separar arquivos:
 arquivos_empresa = []
@@ -170,8 +169,9 @@ for e in range(0, len(arquivos_empresa)):
 
     empresa = pd.DataFrame(columns=[0, 1, 2, 3, 4, 5, 6])
     empresa_dtypes = {0: 'object', 1: 'object', 2: 'object', 3: 'object', 4: 'object', 5: 'object', 6: 'object'}
+    extracted_file_path = Path(f'{extracted_files}/{arquivos_empresa[e]}')
 
-    empresa = pd.read_csv(filepath_or_buffer=dir+'\\'+arquivos_empresa[e],
+    empresa = pd.read_csv(filepath_or_buffer=extracted_file_path,
                           sep=';',
                           #nrows=100,
                           skiprows=0,
@@ -224,8 +224,9 @@ for e in range(0, len(arquivos_estabelecimento)):
         pass
 
     estabelecimento = pd.DataFrame(columns=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28])
+    extracted_file_path = Path(f'{extracted_files}/{arquivos_estabelecimento[e]}')
 
-    estabelecimento = pd.read_csv(filepath_or_buffer=dir+'\\'+arquivos_estabelecimento[e],
+    estabelecimento = pd.read_csv(filepath_or_buffer=extracted_file_path,
                           sep=';',
                           #nrows=100,
                           skiprows=0,
@@ -302,9 +303,9 @@ for e in range(0, len(arquivos_socios)):
     except:
         pass
 
+    extracted_file_path = Path(f'{extracted_files}/{arquivos_socios[e]}')
     socios = pd.DataFrame(columns=[1,2,3,4,5,6,7,8,9,10,11])
-
-    socios = pd.read_csv(filepath_or_buffer=dir+'\\'+arquivos_socios[e],
+    socios = pd.read_csv(filepath_or_buffer=extracted_file_path,
                           sep=';',
                           #nrows=100,
                           skiprows=0,
@@ -364,7 +365,9 @@ for e in range(0, len(arquivos_simples)):
 
     # Verificar tamanho do arquivo:
     print('Lendo o arquivo ' + arquivos_simples[e]+' [...]')
-    simples_lenght = sum(1 for line in open(dir+'\\'+arquivos_simples[e], "r"))
+    extracted_file_path = Path(f'{extracted_files}/{arquivos_simples[e]}')
+
+    simples_lenght = sum(1 for line in open(extracted_file_path, "r"))
     print('Linhas no arquivo do Simples '+ arquivos_simples[e] +': '+str(simples_lenght))
 
     tamanho_das_partes = 1000000 # Registros por carga
@@ -378,7 +381,7 @@ for e in range(0, len(arquivos_simples)):
         print('Iniciando a parte ' + str(i+1) + ' [...]')
         simples = pd.DataFrame(columns=[1,2,3,4,5,6])
 
-        simples = pd.read_csv(filepath_or_buffer=dir+'\\'+arquivos_simples[e],
+        simples = pd.read_csv(filepath_or_buffer=extracted_file_path,
                               sep=';',
                               nrows=nrows,
                               skiprows=skiprows,
@@ -440,8 +443,9 @@ for e in range(0, len(arquivos_cnae)):
     except:
         pass
 
+    extracted_file_path = Path(f'{extracted_files}/{arquivos_cnae[e]}')
     cnae = pd.DataFrame(columns=[1,2])
-    cnae = pd.read_csv(filepath_or_buffer=dir+'\\'+arquivos_cnae[e], sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    cnae = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
     # Tratamento do arquivo antes de inserir na base:
     cnae = cnae.reset_index()
@@ -484,8 +488,9 @@ for e in range(0, len(arquivos_moti)):
     except:
         pass
 
+    extracted_file_path = Path(f'{extracted_files}/{arquivos_moti[e]}')
     moti = pd.DataFrame(columns=[1,2])
-    moti = pd.read_csv(filepath_or_buffer=dir+'\\'+arquivos_moti[e], sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    moti = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
     # Tratamento do arquivo antes de inserir na base:
     moti = moti.reset_index()
@@ -528,8 +533,9 @@ for e in range(0, len(arquivos_munic)):
     except:
         pass
 
+    extracted_file_path = Path(f'{extracted_files}/{arquivos_munic[e]}')
     munic = pd.DataFrame(columns=[1,2])
-    munic = pd.read_csv(filepath_or_buffer=dir+'\\'+arquivos_munic[e], sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    munic = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
     # Tratamento do arquivo antes de inserir na base:
     munic = munic.reset_index()
@@ -572,8 +578,9 @@ for e in range(0, len(arquivos_natju)):
     except:
         pass
 
+    extracted_file_path = Path(f'{extracted_files}/{arquivos_natju[e]}')
     natju = pd.DataFrame(columns=[1,2])
-    natju = pd.read_csv(filepath_or_buffer=dir+'\\'+arquivos_natju[e], sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    natju = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
     # Tratamento do arquivo antes de inserir na base:
     natju = natju.reset_index()
@@ -616,8 +623,9 @@ for e in range(0, len(arquivos_pais)):
     except:
         pass
 
+    extracted_file_path = Path(f'{extracted_files}/{arquivos_pais[e]}')
     pais = pd.DataFrame(columns=[1,2])
-    pais = pd.read_csv(filepath_or_buffer=dir+'\\'+arquivos_pais[e], sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    pais = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
     # Tratamento do arquivo antes de inserir na base:
     pais = pais.reset_index()
@@ -660,8 +668,9 @@ for e in range(0, len(arquivos_quals)):
     except:
         pass
 
+    extracted_file_path = Path(f'{extracted_files}/{arquivos_quals[e]}')
     quals = pd.DataFrame(columns=[1,2])
-    quals = pd.read_csv(filepath_or_buffer=dir+'\\'+arquivos_quals[e], sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    quals = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
     # Tratamento do arquivo antes de inserir na base:
     quals = quals.reset_index()
