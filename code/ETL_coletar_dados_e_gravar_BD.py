@@ -1,4 +1,5 @@
 from datetime import date
+from dotenv import load_dotenv
 from pathlib import Path
 from sqlalchemy import create_engine
 import bs4 as bs
@@ -15,9 +16,14 @@ import wget
 import zipfile
 
 #%%
+def getenv(env):
+    os.getenv(env)
+
+load_dotenv()
+
 dados_rf = 'http://200.152.38.155/CNPJ/'
-output_files = Path('C:/Aphonso/Dados_RFB')
-extracted_files = Path(output_files / 'Extracted_files')
+output_files = Path(getEnv('OUTPUT_FILES_PATH'))
+extracted_files = Path(getEnv('EXTRACTED_FILES_PATH'))
 raw_html = urllib.request.urlopen(dados_rf)
 raw_html = raw_html.read()
 
@@ -136,11 +142,11 @@ for i in range(len(Items)):
 #%%
 # Conectar no banco de dados:
 # Dados da conexão com o BD
-user='postgres'
-passw='postgres'
-host='localhost'
-port='5432'
-database='Dados_RFB'
+user=getEnv('DB_USER')
+passw=getEnv('DB_PASSWORD')
+host=getEnv('DB_HOST')
+port=getEnv('DB_PORT')
+database=getEnv('DB_NAME')
 
 # Conectar:
 engine = create_engine('postgresql://'+user+':'+passw+'@'+host+':'+port+'/'+database)
