@@ -17,7 +17,7 @@ import zipfile
 
 #%%
 def getEnv(env):
-    os.getenv(env)
+    return os.getenv(env)
 
 load_dotenv()
 
