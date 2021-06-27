@@ -19,13 +19,14 @@ Nesse repositório consta um processo de ETL para **i)** baixar os arquivos; **i
 ### How to use:
 1. Com o Postgre instalado, inicie a instância do servidor (pode ser local) e crie o banco de dados conforme o arquivo `banco_de_dados.sql`.
 
-2. Conforme o seu ambiente, substitua as variáveis abaixo no arquivo `ETL_coletar_dados_e_gravar_BD.py`:
-   - `output_files`: diretório de destino para o donwload dos arquivos
-   - `user`: usuário do banco de dados criado pelo arquivo `banco_de_dados.sql`
-   - `passw`: senha do usuário do BD
-   - `host`: host da conexão com o BD 
-   - `port`: porta da conexão com o BD 
-   - `database`: nome da base de dados na instância (`Dados_RFB` - conforme arquivo `banco_de_dados.sql`)
+2. Conforme o seu ambiente, crie um arquivo `.env` no diretório `code`, conforme as variáveis de ambiente do arquivo `.env_template`:
+   - `OUTPUT_FILES_PATH`: diretório de destino para o donwload dos arquivos
+   - `EXTRACTED_FILES_PATH`: diretório de destino para a extração dos arquivos .zip
+   - `DB_USER`: usuário do banco de dados criado pelo arquivo `banco_de_dados.sql`
+   - `DB_PASSWORD`: senha do usuário do BD
+   - `DB_HOST`: host da conexão com o BD 
+   - `DB_PORT`: porta da conexão com o BD 
+   - `DB_NAME`: nome da base de dados na instância (`Dados_RFB` - conforme arquivo `banco_de_dados.sql`)
 
 3. Instale as bibliotecas necessárias, disponíveis em `requirements.txt`:
 ```
