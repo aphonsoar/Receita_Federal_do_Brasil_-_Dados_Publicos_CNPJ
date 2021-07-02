@@ -80,7 +80,7 @@ def insert_data(
                 commandOutput = subprocess.check_output(f'file -bi {escaped_extracted_file_path}', shell=True)
                 charset = re.search('charset=(.*)', commandOutput.decode("utf-8")).group(1)
                 charset = codec[charset]
-                charset = 'iso-8859-1'
+                # charset = 'iso-8859-1' Caso tenha problema com a codificação, insira um codec manualmente aqui.
 
                 table = pd.read_csv(
                     filepath_or_buffer=extracted_file_path,
