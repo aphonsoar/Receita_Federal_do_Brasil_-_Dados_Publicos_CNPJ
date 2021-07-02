@@ -36,7 +36,6 @@ def download_files(Files):
         i_l += 1
         file_path = output_files / l
         if not os.path.exists(file_path):
-            print('Baixando arquivo:')
             print(f'[{str(i_l)}/{total}] {l}')
             url = dados_rf+l
             wget.download(url, out=str(output_files), bar=bar_progress)
