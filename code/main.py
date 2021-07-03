@@ -23,7 +23,6 @@ Files = files.get_file_list()
 #%%%
 # Download dos arquivos .zip
 files.download_files(Files)
-exit(0)
 
 #%%%
 # Download do layout .pdf
