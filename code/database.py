@@ -1,12 +1,12 @@
+from codec import codec
 from pathlib import Path
 from sqlalchemy import create_engine
+from utils import get_encoding_codec
 import pandas as pd
 import psycopg2
 import re
-import subprocess
 import time
 import var
-from codec import codec
 
 #%%
 def start():
@@ -77,10 +77,8 @@ def insert_data(
                 print('Iniciando a parte ' + str(i+1) + ' [...]')
 
                 escaped_extracted_file_path = str(extracted_file_path).replace("$", "\$")
-                commandOutput = subprocess.check_output(f'file -bi {escaped_extracted_file_path}', shell=True)
-                charset = re.search('charset=(.*)', commandOutput.decode("utf-8")).group(1)
-                charset = codec[charset]
-                # charset = 'iso-8859-1' Caso tenha problema com a codificação, insira um codec manualmente aqui.
+                charset = get_encoding_codec(escaped_extracted_file_path)
+                #Caso tenha problema com a codificação, insira um codec manualmente aqui. Exemplo: charset = 'iso-8859-1'
 
                 table = pd.read_csv(
                     filepath_or_buffer=extracted_file_path,
