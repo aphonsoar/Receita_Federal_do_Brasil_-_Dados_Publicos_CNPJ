@@ -72,7 +72,7 @@ database.insert_data(
     'empresa',
     column_labels
 )
-exit(0)
+
 #%%%
 # Arquivos de estabelecimento:
 column_labels = [
