@@ -12,14 +12,14 @@ Nesse repositório consta um processo de ETL para **i)** baixar os arquivos; **i
 
 ### Infraestrutura necessária:
 - [Python 3.8](https://www.python.org/downloads/release/python-3810/)
-- [PostgreSQL 13](https://www.postgresql.org/download/)
+- [PostgreSQL 14.2](https://www.postgresql.org/download/)
   
 ---------------------
 
 ### How to use:
-1. Com o Postgre instalado, inicie a instância do servidor (pode ser local) e crie o banco de dados conforme o arquivo `banco_de_dados.sql`.
+1. Com o Postgres instalado, inicie a instância do servidor (pode ser local) e crie o banco de dados conforme o arquivo `banco_de_dados.sql`.
 
-2. Conforme o seu ambiente, crie um arquivo `.env` no diretório `code`, conforme as variáveis de ambiente do arquivo `.env_template`:
+2. Crie um arquivo `.env` no diretório `code`, conforme as variáveis de ambiente do seu ambiente de trabalho (localhost). Utilize como referência o arquivo `.env_template`. Você pode também, por exemplo, renomear o arquivo de `.env_template` para apenas `.env` e então utilizá-lo:
    - `OUTPUT_FILES_PATH`: diretório de destino para o donwload dos arquivos
    - `EXTRACTED_FILES_PATH`: diretório de destino para a extração dos arquivos .zip
    - `DB_USER`: usuário do banco de dados criado pelo arquivo `banco_de_dados.sql`

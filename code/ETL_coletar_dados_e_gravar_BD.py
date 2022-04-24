@@ -16,14 +16,31 @@ import wget
 import zipfile
 
 #%%
+# Ler arquivo de configuração de ambiente # https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1
 def getEnv(env):
     return os.getenv(env)
 
-load_dotenv()
+print('Especifique o local do seu arquivo de configuração ".env". Por exemplo: C:\...\Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ\code')
+# C:\Aphonso_C\Git\Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ\code
+local_env = input()
+dotenv_path = Path(local_env+'\.env')
+load_dotenv(dotenv_path=dotenv_path)
 
 dados_rf = 'http://200.152.38.155/CNPJ/'
-output_files = Path(getEnv('OUTPUT_FILES_PATH'))
-extracted_files = Path(getEnv('EXTRACTED_FILES_PATH'))
+
+#%%
+# Read details from ".env" file:
+try:
+    output_files = getEnv('OUTPUT_FILES_PATH')
+    extracted_files = getEnv('EXTRACTED_FILES_PATH')
+    print('Diretórios definidos: \n' +
+          'output_files: ' + str(output_files)  + '\n' +
+          'extracted_files: ' + str(extracted_files))
+except:
+    pass
+    print('Erro na definição dos diretórios, verifique o arquivo ".env" ou o local informado do seu arquivo de configuração.')
+
+#%%
 raw_html = urllib.request.urlopen(dados_rf)
 raw_html = raw_html.read()
 
@@ -51,8 +68,6 @@ for f in Files:
 ########################################################################################################################
 ## DOWNLOAD ############################################################################################################
 ########################################################################################################################
-
-# Download files
 # Create this bar_progress method which is invoked automatically from wget:
 def bar_progress(current, total, width=80):
   progress_message = "Downloading: %d%% [%d / %d] bytes - " % (current / total * 100, current, total)
@@ -83,6 +98,7 @@ wget.download(Layout, out=output_files, bar=bar_progress)
 if not os.path.exists(extracted_files):
     os.mkdir(extracted_files)
 
+#%%
 # Extracting files:
 i_l = 0
 for l in Files:
@@ -90,7 +106,7 @@ for l in Files:
         i_l += 1
         print('Descompactando arquivo:')
         print(str(i_l) + ' - ' + l)
-        with zipfile.ZipFile(output_files / l, 'r') as zip_ref:
+        with zipfile.ZipFile(output_files + '\\' + l, 'r') as zip_ref:
             zip_ref.extractall(extracted_files)
     except:
         pass
