@@ -55,8 +55,20 @@ for m in re.finditer(text, html_str):
     i_start = m.start()-40
     i_end = m.end()
     i_loc = html_str[i_start:i_end].find('href=')+6
-    print(html_str[i_start+i_loc:i_end])
     Files.append(html_str[i_start+i_loc:i_end])
+
+# Correcao do nome dos arquivos devido a mudanca na estrutura do HTML da pagina - 31/07/22 - Aphonso Rafael
+Files_clean = []
+for i in range(len(Files)):
+    if not Files[i].find('.zip">') > -1:
+        Files_clean.append(Files[i])
+
+try:
+    del Files
+except:
+    pass
+
+Files = Files_clean
 
 print('Arquivos que serão baixados:')
 i_f = 0
