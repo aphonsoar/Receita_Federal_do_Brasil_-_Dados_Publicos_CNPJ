@@ -15,6 +15,26 @@ import urllib.request
 import wget
 import zipfile
 
+
+def to_sql(dataframe, **kwargs):
+    '''
+    Quebra em pedacos a tarefa de inserir registros no banco
+    '''
+    size = 4096
+    total = len(dataframe)
+    name = kwargs.get('name')
+
+    def chunker(df):
+        return (df[i:i + size] for i in range(0, len(df), size))
+
+    for i, df in enumerate(chunker(dataframe)):
+        df.to_sql(**kwargs)
+        index = i * size
+        percent = (index * 100) / total
+        progress = f'{name} {percent:.2f}% {index:0{len(str(total))}}/{total}'
+        sys.stdout.write(f'\r{progress}')
+
+
 #%%
 # Ler arquivo de configuração de ambiente # https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1
 def getEnv(env):
