@@ -210,7 +210,9 @@ for e in range(0, len(arquivos_empresa)):
                           #nrows=100,
                           skiprows=0,
                           header=None,
-                          dtype=empresa_dtypes)
+                          dtype=empresa_dtypes,
+                          encoding='latin-1',
+    )
 
     # Tratamento do arquivo antes de inserir na base:
     empresa = empresa.reset_index()
@@ -265,7 +267,9 @@ for e in range(0, len(arquivos_estabelecimento)):
                           #nrows=100,
                           skiprows=0,
                           header=None,
-                          dtype='object')
+                          dtype='object',
+                          encoding='latin-1',
+    )
 
     # Tratamento do arquivo antes de inserir na base:
     estabelecimento = estabelecimento.reset_index()
@@ -344,7 +348,9 @@ for e in range(0, len(arquivos_socios)):
                           #nrows=100,
                           skiprows=0,
                           header=None,
-                          dtype='object')
+                          dtype='object',
+                          encoding='latin-1',
+    )
 
     # Tratamento do arquivo antes de inserir na base:
     socios = socios.reset_index()
@@ -420,7 +426,9 @@ for e in range(0, len(arquivos_simples)):
                               nrows=nrows,
                               skiprows=skiprows,
                               header=None,
-                              dtype='object')
+                              dtype='object',
+                              encoding='latin-1',
+        )
 
         # Tratamento do arquivo antes de inserir na base:
         simples = simples.reset_index()
