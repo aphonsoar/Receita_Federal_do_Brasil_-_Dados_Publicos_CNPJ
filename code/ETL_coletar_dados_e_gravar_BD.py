@@ -15,6 +15,14 @@ import urllib.request
 import wget
 import zipfile
 
+
+def makedirs(path):
+    '''
+    cria path caso seja necessario
+    '''
+    if not os.path.exists(path):
+        os.makedirs(path)
+
 #%%
 # Ler arquivo de configuração de ambiente # https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1
 def getEnv(env):
@@ -30,9 +38,15 @@ dados_rf = 'http://200.152.38.155/CNPJ/'
 
 #%%
 # Read details from ".env" file:
+output_files = None
+extracted_files = None
 try:
     output_files = getEnv('OUTPUT_FILES_PATH')
+    makedirs(output_files)
+
     extracted_files = getEnv('EXTRACTED_FILES_PATH')
+    makedirs(extracted_files)
+
     print('Diretórios definidos: \n' +
           'output_files: ' + str(output_files)  + '\n' +
           'extracted_files: ' + str(extracted_files))
@@ -105,10 +119,6 @@ print('Baixando layout:')
 wget.download(Layout, out=output_files, bar=bar_progress)
 
 ####################################################################################################################################################
-#%%
-# Creating directory to store the extracted files:
-if not os.path.exists(extracted_files):
-    os.mkdir(extracted_files)
 
 #%%
 # Extracting files:
