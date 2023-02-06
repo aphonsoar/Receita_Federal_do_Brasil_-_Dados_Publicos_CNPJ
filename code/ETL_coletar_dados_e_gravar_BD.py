@@ -1,6 +1,5 @@
 from datetime import date
 from dotenv import load_dotenv
-from pathlib import Path
 from sqlalchemy import create_engine
 import bs4 as bs
 import ftplib
@@ -23,7 +22,7 @@ def getEnv(env):
 print('Especifique o local do seu arquivo de configuração ".env". Por exemplo: C:\...\Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ\code')
 # C:\Aphonso_C\Git\Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ\code
 local_env = input()
-dotenv_path = Path(local_env+'\.env')
+dotenv_path = os.path.join(local_env, '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
 dados_rf = 'http://200.152.38.155/CNPJ/'
@@ -118,7 +117,8 @@ for l in Files:
         i_l += 1
         print('Descompactando arquivo:')
         print(str(i_l) + ' - ' + l)
-        with zipfile.ZipFile(output_files + '\\' + l, 'r') as zip_ref:
+        full_path = os.path.join(output_files, l)
+        with zipfile.ZipFile(full_path, 'r') as zip_ref:
             zip_ref.extractall(extracted_files)
     except:
         pass
@@ -203,7 +203,7 @@ for e in range(0, len(arquivos_empresa)):
 
     empresa = pd.DataFrame(columns=[0, 1, 2, 3, 4, 5, 6])
     empresa_dtypes = {0: 'object', 1: 'object', 2: 'object', 3: 'object', 4: 'object', 5: 'object', 6: 'object'}
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_empresa[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_empresa[e])
 
     empresa = pd.read_csv(filepath_or_buffer=extracted_file_path,
                           sep=';',
@@ -258,7 +258,7 @@ for e in range(0, len(arquivos_estabelecimento)):
         pass
 
     estabelecimento = pd.DataFrame(columns=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28])
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_estabelecimento[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_estabelecimento[e])
 
     estabelecimento = pd.read_csv(filepath_or_buffer=extracted_file_path,
                           sep=';',
@@ -337,7 +337,7 @@ for e in range(0, len(arquivos_socios)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_socios[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_socios[e])
     socios = pd.DataFrame(columns=[1,2,3,4,5,6,7,8,9,10,11])
     socios = pd.read_csv(filepath_or_buffer=extracted_file_path,
                           sep=';',
@@ -399,7 +399,7 @@ for e in range(0, len(arquivos_simples)):
 
     # Verificar tamanho do arquivo:
     print('Lendo o arquivo ' + arquivos_simples[e]+' [...]')
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_simples[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_simples[e])
 
     simples_lenght = sum(1 for line in open(extracted_file_path, "r"))
     print('Linhas no arquivo do Simples '+ arquivos_simples[e] +': '+str(simples_lenght))
@@ -477,7 +477,7 @@ for e in range(0, len(arquivos_cnae)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_cnae[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_cnae[e])
     cnae = pd.DataFrame(columns=[1,2])
     cnae = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -522,7 +522,7 @@ for e in range(0, len(arquivos_moti)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_moti[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_moti[e])
     moti = pd.DataFrame(columns=[1,2])
     moti = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -567,7 +567,7 @@ for e in range(0, len(arquivos_munic)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_munic[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_munic[e])
     munic = pd.DataFrame(columns=[1,2])
     munic = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -612,7 +612,7 @@ for e in range(0, len(arquivos_natju)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_natju[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_natju[e])
     natju = pd.DataFrame(columns=[1,2])
     natju = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -657,7 +657,7 @@ for e in range(0, len(arquivos_pais)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_pais[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_pais[e])
     pais = pd.DataFrame(columns=[1,2])
     pais = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -702,7 +702,7 @@ for e in range(0, len(arquivos_quals)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_quals[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_quals[e])
     quals = pd.DataFrame(columns=[1,2])
     quals = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
