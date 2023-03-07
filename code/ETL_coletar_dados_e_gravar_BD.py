@@ -1,6 +1,5 @@
 from datetime import date
 from dotenv import load_dotenv
-from pathlib import Path
 from sqlalchemy import create_engine
 import bs4 as bs
 import ftplib
@@ -15,13 +14,32 @@ import urllib.request
 import wget
 import zipfile
 
-
+#%%
 def makedirs(path):
     '''
     cria path caso seja necessario
     '''
     if not os.path.exists(path):
         os.makedirs(path)
+
+#%%
+def to_sql(dataframe, **kwargs):
+    '''
+    Quebra em pedacos a tarefa de inserir registros no banco
+    '''
+    size = 4096
+    total = len(dataframe)
+    name = kwargs.get('name')
+
+    def chunker(df):
+        return (df[i:i + size] for i in range(0, len(df), size))
+
+    for i, df in enumerate(chunker(dataframe)):
+        df.to_sql(**kwargs)
+        index = i * size
+        percent = (index * 100) / total
+        progress = f'{name} {percent:.2f}% {index:0{len(str(total))}}/{total}'
+        sys.stdout.write(f'\r{progress}')
 
 #%%
 # Ler arquivo de configuração de ambiente # https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1
@@ -31,7 +49,7 @@ def getEnv(env):
 print('Especifique o local do seu arquivo de configuração ".env". Por exemplo: C:\...\Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ\code')
 # C:\Aphonso_C\Git\Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ\code
 local_env = input()
-dotenv_path = Path(local_env+'\.env')
+dotenv_path = os.path.join(local_env, '.env')
 load_dotenv(dotenv_path=dotenv_path)
 
 dados_rf = 'http://200.152.38.155/CNPJ/'
@@ -128,7 +146,8 @@ for l in Files:
         i_l += 1
         print('Descompactando arquivo:')
         print(str(i_l) + ' - ' + l)
-        with zipfile.ZipFile(output_files + '\\' + l, 'r') as zip_ref:
+        full_path = os.path.join(output_files, l)
+        with zipfile.ZipFile(full_path, 'r') as zip_ref:
             zip_ref.extractall(extracted_files)
     except:
         pass
@@ -213,14 +232,16 @@ for e in range(0, len(arquivos_empresa)):
 
     empresa = pd.DataFrame(columns=[0, 1, 2, 3, 4, 5, 6])
     empresa_dtypes = {0: 'object', 1: 'object', 2: 'object', 3: 'object', 4: 'object', 5: 'object', 6: 'object'}
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_empresa[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_empresa[e])
 
     empresa = pd.read_csv(filepath_or_buffer=extracted_file_path,
                           sep=';',
                           #nrows=100,
                           skiprows=0,
                           header=None,
-                          dtype=empresa_dtypes)
+                          dtype=empresa_dtypes,
+                          encoding='latin-1',
+    )
 
     # Tratamento do arquivo antes de inserir na base:
     empresa = empresa.reset_index()
@@ -235,7 +256,7 @@ for e in range(0, len(arquivos_empresa)):
 
     # Gravar dados no banco:
     # Empresa
-    empresa.to_sql(name='empresa', con=engine, if_exists='append', index=False)
+    to_sql(empresa, name='empresa', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_empresa[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -268,14 +289,16 @@ for e in range(0, len(arquivos_estabelecimento)):
         pass
 
     estabelecimento = pd.DataFrame(columns=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28])
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_estabelecimento[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_estabelecimento[e])
 
     estabelecimento = pd.read_csv(filepath_or_buffer=extracted_file_path,
                           sep=';',
                           #nrows=100,
                           skiprows=0,
                           header=None,
-                          dtype='object')
+                          dtype='object',
+                          encoding='latin-1',
+    )
 
     # Tratamento do arquivo antes de inserir na base:
     estabelecimento = estabelecimento.reset_index()
@@ -315,7 +338,7 @@ for e in range(0, len(arquivos_estabelecimento)):
 
     # Gravar dados no banco:
     # estabelecimento
-    estabelecimento.to_sql(name='estabelecimento', con=engine, if_exists='append', index=False)
+    to_sql(estabelecimento, name='estabelecimento', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_estabelecimento[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -347,14 +370,16 @@ for e in range(0, len(arquivos_socios)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_socios[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_socios[e])
     socios = pd.DataFrame(columns=[1,2,3,4,5,6,7,8,9,10,11])
     socios = pd.read_csv(filepath_or_buffer=extracted_file_path,
                           sep=';',
                           #nrows=100,
                           skiprows=0,
                           header=None,
-                          dtype='object')
+                          dtype='object',
+                          encoding='latin-1',
+    )
 
     # Tratamento do arquivo antes de inserir na base:
     socios = socios.reset_index()
@@ -375,7 +400,7 @@ for e in range(0, len(arquivos_socios)):
 
     # Gravar dados no banco:
     # socios
-    socios.to_sql(name='socios', con=engine, if_exists='append', index=False)
+    to_sql(socios, name='socios', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_socios[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -409,7 +434,7 @@ for e in range(0, len(arquivos_simples)):
 
     # Verificar tamanho do arquivo:
     print('Lendo o arquivo ' + arquivos_simples[e]+' [...]')
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_simples[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_simples[e])
 
     simples_lenght = sum(1 for line in open(extracted_file_path, "r"))
     print('Linhas no arquivo do Simples '+ arquivos_simples[e] +': '+str(simples_lenght))
@@ -430,7 +455,9 @@ for e in range(0, len(arquivos_simples)):
                               nrows=nrows,
                               skiprows=skiprows,
                               header=None,
-                              dtype='object')
+                              dtype='object',
+                              encoding='latin-1',
+        )
 
         # Tratamento do arquivo antes de inserir na base:
         simples = simples.reset_index()
@@ -449,7 +476,7 @@ for e in range(0, len(arquivos_simples)):
 
         # Gravar dados no banco:
         # simples
-        simples.to_sql(name='simples', con=engine, if_exists='append', index=False)
+        to_sql(simples, name='simples', con=engine, if_exists='append', index=False)
         print('Arquivo ' + arquivos_simples[e] + ' inserido com sucesso no banco de dados! - Parte '+ str(i+1))
 
         try:
@@ -487,7 +514,7 @@ for e in range(0, len(arquivos_cnae)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_cnae[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_cnae[e])
     cnae = pd.DataFrame(columns=[1,2])
     cnae = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -500,7 +527,7 @@ for e in range(0, len(arquivos_cnae)):
 
     # Gravar dados no banco:
     # cnae
-    cnae.to_sql(name='cnae', con=engine, if_exists='append', index=False)
+    to_sql(cnae, name='cnae', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_cnae[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -532,7 +559,7 @@ for e in range(0, len(arquivos_moti)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_moti[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_moti[e])
     moti = pd.DataFrame(columns=[1,2])
     moti = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -545,7 +572,7 @@ for e in range(0, len(arquivos_moti)):
 
     # Gravar dados no banco:
     # moti
-    moti.to_sql(name='moti', con=engine, if_exists='append', index=False)
+    to_sql(moti, name='moti', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_moti[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -577,7 +604,7 @@ for e in range(0, len(arquivos_munic)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_munic[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_munic[e])
     munic = pd.DataFrame(columns=[1,2])
     munic = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -590,7 +617,7 @@ for e in range(0, len(arquivos_munic)):
 
     # Gravar dados no banco:
     # munic
-    munic.to_sql(name='munic', con=engine, if_exists='append', index=False)
+    to_sql(munic, name='munic', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_munic[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -622,7 +649,7 @@ for e in range(0, len(arquivos_natju)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_natju[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_natju[e])
     natju = pd.DataFrame(columns=[1,2])
     natju = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -635,7 +662,7 @@ for e in range(0, len(arquivos_natju)):
 
     # Gravar dados no banco:
     # natju
-    natju.to_sql(name='natju', con=engine, if_exists='append', index=False)
+    to_sql(natju, name='natju', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_natju[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -667,7 +694,7 @@ for e in range(0, len(arquivos_pais)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_pais[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_pais[e])
     pais = pd.DataFrame(columns=[1,2])
     pais = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -680,7 +707,7 @@ for e in range(0, len(arquivos_pais)):
 
     # Gravar dados no banco:
     # pais
-    pais.to_sql(name='pais', con=engine, if_exists='append', index=False)
+    to_sql(pais, name='pais', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_pais[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -712,7 +739,7 @@ for e in range(0, len(arquivos_quals)):
     except:
         pass
 
-    extracted_file_path = Path(f'{extracted_files}/{arquivos_quals[e]}')
+    extracted_file_path = os.path.join(extracted_files, arquivos_quals[e])
     quals = pd.DataFrame(columns=[1,2])
     quals = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
 
@@ -725,7 +752,7 @@ for e in range(0, len(arquivos_quals)):
 
     # Gravar dados no banco:
     # quals
-    quals.to_sql(name='quals', con=engine, if_exists='append', index=False)
+    to_sql(quals, name='quals', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_quals[e] + ' inserido com sucesso no banco de dados!')
 
 try:
