@@ -15,6 +15,26 @@ import urllib.request
 import wget
 import zipfile
 
+
+def to_sql(dataframe, **kwargs):
+    '''
+    Quebra em pedacos a tarefa de inserir registros no banco
+    '''
+    size = 4096
+    total = len(dataframe)
+    name = kwargs.get('name')
+
+    def chunker(df):
+        return (df[i:i + size] for i in range(0, len(df), size))
+
+    for i, df in enumerate(chunker(dataframe)):
+        df.to_sql(**kwargs)
+        index = i * size
+        percent = (index * 100) / total
+        progress = f'{name} {percent:.2f}% {index:0{len(str(total))}}/{total}'
+        sys.stdout.write(f'\r{progress}')
+
+
 #%%
 # Ler arquivo de configuração de ambiente # https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1
 def getEnv(env):
@@ -227,7 +247,7 @@ for e in range(0, len(arquivos_empresa)):
 
     # Gravar dados no banco:
     # Empresa
-    empresa.to_sql(name='empresa', con=engine, if_exists='append', index=False)
+    to_sql(empresa, name='empresa', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_empresa[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -309,7 +329,7 @@ for e in range(0, len(arquivos_estabelecimento)):
 
     # Gravar dados no banco:
     # estabelecimento
-    estabelecimento.to_sql(name='estabelecimento', con=engine, if_exists='append', index=False)
+    to_sql(estabelecimento, name='estabelecimento', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_estabelecimento[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -371,7 +391,7 @@ for e in range(0, len(arquivos_socios)):
 
     # Gravar dados no banco:
     # socios
-    socios.to_sql(name='socios', con=engine, if_exists='append', index=False)
+    to_sql(socios, name='socios', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_socios[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -447,7 +467,7 @@ for e in range(0, len(arquivos_simples)):
 
         # Gravar dados no banco:
         # simples
-        simples.to_sql(name='simples', con=engine, if_exists='append', index=False)
+        to_sql(simples, name='simples', con=engine, if_exists='append', index=False)
         print('Arquivo ' + arquivos_simples[e] + ' inserido com sucesso no banco de dados! - Parte '+ str(i+1))
 
         try:
@@ -498,7 +518,7 @@ for e in range(0, len(arquivos_cnae)):
 
     # Gravar dados no banco:
     # cnae
-    cnae.to_sql(name='cnae', con=engine, if_exists='append', index=False)
+    to_sql(cnae, name='cnae', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_cnae[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -543,7 +563,7 @@ for e in range(0, len(arquivos_moti)):
 
     # Gravar dados no banco:
     # moti
-    moti.to_sql(name='moti', con=engine, if_exists='append', index=False)
+    to_sql(moti, name='moti', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_moti[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -588,7 +608,7 @@ for e in range(0, len(arquivos_munic)):
 
     # Gravar dados no banco:
     # munic
-    munic.to_sql(name='munic', con=engine, if_exists='append', index=False)
+    to_sql(munic, name='munic', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_munic[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -633,7 +653,7 @@ for e in range(0, len(arquivos_natju)):
 
     # Gravar dados no banco:
     # natju
-    natju.to_sql(name='natju', con=engine, if_exists='append', index=False)
+    to_sql(natju, name='natju', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_natju[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -678,7 +698,7 @@ for e in range(0, len(arquivos_pais)):
 
     # Gravar dados no banco:
     # pais
-    pais.to_sql(name='pais', con=engine, if_exists='append', index=False)
+    to_sql(pais, name='pais', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_pais[e] + ' inserido com sucesso no banco de dados!')
 
 try:
@@ -723,7 +743,7 @@ for e in range(0, len(arquivos_quals)):
 
     # Gravar dados no banco:
     # quals
-    quals.to_sql(name='quals', con=engine, if_exists='append', index=False)
+    to_sql(quals, name='quals', con=engine, if_exists='append', index=False)
     print('Arquivo ' + arquivos_quals[e] + ' inserido com sucesso no banco de dados!')
 
 try:
