@@ -207,7 +207,7 @@ database=getEnv('DB_NAME')
 
 # Conectar:
 engine = create_engine('postgresql://'+user+':'+passw+'@'+host+':'+port+'/'+database)
-conn = psycopg2.connect('dbname='+database+' '+'user='+user+' '+'host='+host+' '+'password='+passw)
+conn = psycopg2.connect('dbname='+database+' '+'user='+user+' '+'host='+host+' '+'port='+port+' '+'password='+passw)
 cur = conn.cursor()
 
 #%%
