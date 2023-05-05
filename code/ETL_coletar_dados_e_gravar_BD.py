@@ -10,9 +10,29 @@ import psycopg2
 import re
 import sys
 import time
+import requests
 import urllib.request
 import wget
 import zipfile
+
+
+def check_diff(url, file_name):
+    '''
+    Verifica se o arquivo no servidor existe no disco e se ele tem o mesmo
+    tamanho no servidor.
+    '''
+    if not os.path.isfile(file_name):
+        return True # ainda nao foi baixado
+
+    response = requests.head(url)
+    new_size = int(response.headers.get('content-length', 0))
+    old_size = os.path.getsize(file_name)
+    if new_size != old_size:
+        os.remove(file_name)
+        return True # tamanho diferentes
+
+    return False # arquivos sao iguais
+
 
 #%%
 def makedirs(path):
