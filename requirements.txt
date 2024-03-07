@@ -18,3 +18,4 @@ tzdata==2023.3
 urllib3==2.0.2
 wget>=3.2
 zipp>=3.4.1
+timy==0.4.2
