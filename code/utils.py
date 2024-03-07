@@ -1,14 +1,17 @@
 from sys import stdout
-from os import path, remove
+from os import path, remove, environ
 from requests import head
 from dotenv import load_dotenv
 from os import path
 
 def load_env_path():
-    print('Carregando arquivo de ambiene ".env". ')
-    local_env=this_folder()
-    dotenv_path = path.join(local_env, '/.env')
-    load_dotenv(dotenv_path=dotenv_path)
+    environ['OUTPUT_FILES_PATH'] = '/home/brunolnetto/OUTPUT_FILES.txt'
+    environ['EXTRACTED_FILES_PATH'] = '/home/brunolnetto/EXTRACTED_FILES.txt'
+    environ['POSTGRES_HOST'] = 'localhost'
+    environ['POSTGRES_PORT'] = '5432'
+    environ['POSTGRES_USER'] = 'postgres'
+    environ['POSTGRES_PASSWORD'] = 'postgres'
+    environ['POSTGRES_DB'] = 'Dados_RFB'
 
 def delete_var(var):
     try:
@@ -28,7 +31,8 @@ def this_folder():
 
 # Create this bar_progress method which is invoked automatically from wget:
 def bar_progress(current, total, width=80):
-  progress_message = "Downloading: %d%% [%d / %d] bytes - " % (current / total * 100, current, total)
+  progress_message = f"Downloading: {current / total * 100}%% [{current} / {total}] bytes - "
+  
   # Don't use print() as it will print in new line every time.
   stdout.write("\r" + progress_message)
   stdout.flush()

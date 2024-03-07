@@ -2,11 +2,14 @@ from wget import download
 from os import path, listdir
 from timy import timer
 import pandas as pd
+from numpy import ceil
+from zipfile import ZipFile
 
-from .utils import check_diff, delete_var, to_sql
-from .URLS import DADOS_RF_URL, LAYOUT_URL
-from .scrapper import scrapper_rf
-from .utils import repeat_token, bar_progress
+from utils import check_diff, delete_var, to_sql
+from URLS import DADOS_RF_URL, LAYOUT_URL
+from scrapper import raspar_receita_federal
+from utils import repeat_token, bar_progress
+from constants import CERCA_COMPRIMENTO, TAMANHO_DAS_PARTES
 
 ##########################################################################
 ## LER E INSERIR DADOS ###################################################
@@ -76,9 +79,6 @@ def baixar_dados_receita_federal(base_files, output_files_path):
     print('Baixando layout:')
     download(LAYOUT_URL, out=output_files_path, bar=bar_progress)
 
-from zipfile import ZipFile
-from os import path
-
 ##########################################################################
 ## EXTRACT ###############################################################
 ##########################################################################
@@ -99,7 +99,7 @@ def extrair_dados_receita_federal(base_files, output_files_path, extracted_files
 def buscar_dados_receita_federal(output_files_path, extracted_files_path):
     #%%
     # Raspar dados da página 
-    base_files = scrapper_rf()
+    base_files = raspar_receita_federal()
 
     # Baixar arquivos
     baixar_dados_receita_federal(base_files, output_files_path)
@@ -115,14 +115,14 @@ def buscar_dados_receita_federal(output_files_path, extracted_files_path):
 ##########################################################################
 ## LOAD AND TRANSFORM
 ##########################################################################
-@timer()
+@timer('Popular tabela')
 def popular_tabela(
     engine, cur, conn, 
     label: str, table_name: str, files: list,
     columns: list, to_folder: str, 
     encoding: str, cleanse_transform_map: lambda x: x
 ):
-    fence=repeat_token('#', 35)
+    fence=repeat_token('#', CERCA_COMPRIMENTO)
     title=f'## Arquivos de {label.upper()}:'
     header=f'{fence}\n{title}\n{fence}'
     print(header)
@@ -132,13 +132,13 @@ def popular_tabela(
     conn.commit()
 
     # Inserir dados
-    for e in range(0, len(files)):
-        print('Trabalhando no arquivo: '+files[e]+' [...]')
+    for file in files:
+        print('Trabalhando no arquivo: '+file+' [...]')
         delete_var(artefato)
 
         artefato = pd.DataFrame(columns=list(range(0, len(columns))))
         dtypes = { column: 'object' for column in columns }
-        extracted_file_path = path.join(to_folder, files[e])
+        extracted_file_path = path.join(to_folder, file)
 
         artifact = pd.read_csv(
             filepath_or_buffer=extracted_file_path,
@@ -160,9 +160,69 @@ def popular_tabela(
 
         # Gravar dados no banco:
         to_sql(artifact, name=table_name, con=engine, if_exists='append', index=False)
-        print('Arquivos ' + files[e] + ' inserido com sucesso no banco de dados!')
+        print('Arquivos ' + file + ' inserido com sucesso no banco de dados!')
 
         delete_var(artefato)
+
+        print(f'Arquivos de {label} finalizados!')
+
+@timer('Popular tabela por partes')
+def popular_tabela_por_partes(
+    engine, cur, conn, 
+    label: str, nome_da_tabela: str, arquivos: list,
+    colunas: list, para_pasta: str, 
+    encoding: str, cleanse_transform_map: lambda x: x
+):
+    fence=repeat_token('#', CERCA_COMPRIMENTO)
+    title=f'## Arquivos de {label.upper()}:'
+    header=f'{fence}\n{title}\n{fence}'
+    print(header)
+
+    # Drop table antes do insert
+    cur.execute(f'DROP TABLE IF EXISTS "{nome_da_tabela}";')
+    conn.commit()
+
+    # Inserir dados
+    for arquivo in arquivos:
+        print('Trabalhando no arquivo: '+arquivo+' [...]')
+        delete_var(artefato)
+
+        artefato = pd.DataFrame(columns=list(range(0, len(colunas))))
+        dtypes = { column: 'object' for column in colunas }
+        extracted_file_path = path.join(para_pasta, colunas[e])
+
+        contadem_de_linhas = sum(1 for _ in open(extracted_file_path, "r"))
+        print('Linhas no arquivo '+ arquivo +': '+str(contadem_de_linhas))
+
+        n_partes = ceil(contadem_de_linhas / TAMANHO_DAS_PARTES)
+        nrows = TAMANHO_DAS_PARTES
+        skiprows = 0
+
+        for _ in range(0, n_partes):
+            artifact = pd.read_csv(
+                filepath_or_buffer=extracted_file_path,
+                sep=';',
+                skiprows=skiprows,
+                header=None,
+                dtype=dtypes,
+                encoding=encoding,
+            )
+
+            # Tratamento do arquivo antes de inserir na base:
+            artifact = artifact.reset_index()
+            del artifact['index']
+
+            # Renomear colunas
+            artifact.columns = colunas
+            artifact = cleanse_transform_map(artifact)
+
+            skiprows = skiprows+nrows
+
+            # Gravar dados no banco:
+            to_sql(artifact, name=nome_da_tabela, con=engine, if_exists='append', index=False)
+            print('Arquivos ' + arquivo + ' inserido com sucesso no banco de dados!')
+
+            delete_var(artefato)
 
         print(f'Arquivos de {label} finalizados!')
 

@@ -1,7 +1,7 @@
-from .etl_pipeline import popular_tabela
+from etl_pipeline import popular_tabela
 from timy import timer
+from os import getenv
 
-from utils import getEnv
 from sqlalchemy import create_engine
 from psycopg2 import connect, OperationalError
 
@@ -17,16 +17,17 @@ def connect_db():
     
     try:
         # Obter informações da variável de ambiente
-        user=getEnv('DB_USER')
-        passw=getEnv('DB_PASSWORD')
-        host=getEnv('DB_HOST')
-        port=getEnv('DB_PORT')
-        database=getEnv('DB_NAME')
+        user=getenv('POSTGRES_USER')
+        passw=getenv('POSTGRES_PASSWORD')
+        host=getenv('POSTGRES_HOST')
+        port=getenv('POSTGRES_PORT')
+        database=getenv('POSTGRES_NAME')
 
         # Conectar:
         db_uri=f'postgresql://{user}:{passw}@{host}:{port}/{database}'
         engine = create_engine(db_uri)
         db_info=f'dbname={database} user={user} host={host} port={port} password={passw}'
+        
         conn = connect(db_info)
         cur = conn.cursor()
 
@@ -182,7 +183,7 @@ def popular_quals(engine, cur, conn, extracted_files_path, arquivos_quals):
     )
 
 @timer(ident='Popular banco')
-def popular_banco(engine, cur, conn, extracted_files_path, arquivos):
+def popular_banco(engine, conn, cur, extracted_files_path, arquivos):
     #######################
     ## Arquivos de EMPRESA:
     #######################
@@ -216,7 +217,6 @@ def popular_banco(engine, cur, conn, extracted_files_path, arquivos):
     ######################
     popular_cnae(engine, cur, conn, extracted_files_path, arquivos['cnae'])
 
-    #%%
     #########################################
     ## Arquivos de motivos da situação atual:
     #########################################
@@ -237,7 +237,6 @@ def popular_banco(engine, cur, conn, extracted_files_path, arquivos):
     ######################
     popular_pais(engine, cur, conn, extracted_files_path, arquivos['pais'])
 
-    #%%
     ######################################
     ## Arquivos de qualificação de sócios:
     ######################################

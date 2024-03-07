@@ -1,0 +1,3 @@
+# Registros por carga
+TAMANHO_DAS_PARTES = 1000000
+CERCA_COMPRIMENTO = 35
