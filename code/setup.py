@@ -1,8 +1,6 @@
-from os import makedirs
+from os import makedirs, getenv
 
-from .utils.env import getEnv
-from .setup import set_output_folders
-from .database_connection import connect_db
+from .database_utils import connect_db
 from .utils import load_env_path
 
 def set_output_folders():
@@ -11,10 +9,10 @@ def set_output_folders():
     output_files = None
     extracted_files = None
     try:
-        output_files = getEnv('OUTPUT_FILES_PATH')
+        output_files = getenv('OUTPUT_FILES_PATH')
         makedirs(output_files)
 
-        extracted_files = getEnv('EXTRACTED_FILES_PATH')
+        extracted_files = getenv('EXTRACTED_FILES_PATH')
         makedirs(extracted_files)
 
         print('Diretórios definidos: \n' +
@@ -23,7 +21,6 @@ def set_output_folders():
     
     except:
         ERROR_MESSAGE = 'Erro ao criar diretórios de saída! Verifique o arquivo ".env".'
-        
         print(ERROR_MESSAGE)
     
     return output_files, extracted_files

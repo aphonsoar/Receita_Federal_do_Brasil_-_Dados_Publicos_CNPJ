@@ -2,13 +2,7 @@ from sys import stdout
 from os import path, remove
 from requests import head
 from dotenv import load_dotenv
-from os import getenv, path
-
-#%%
-# Ler arquivo de configuração de ambiente 
-# https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1
-def getEnv(env):
-    return getenv(env)
+from os import path
 
 def load_env_path():
     print('Carregando arquivo de ambiene ".env". ')
