@@ -1,17 +1,19 @@
 from sys import stdout
-from os import path, remove, environ
+from os import path, remove, cpu_count
 from requests import head
-from dotenv import load_dotenv
 from os import path
 
-def load_env_path():
-    environ['OUTPUT_FILES_PATH'] = '/home/brunolnetto/OUTPUT_FILES.txt'
-    environ['EXTRACTED_FILES_PATH'] = '/home/brunolnetto/EXTRACTED_FILES.txt'
-    environ['POSTGRES_HOST'] = 'localhost'
-    environ['POSTGRES_PORT'] = '5432'
-    environ['POSTGRES_USER'] = 'postgres'
-    environ['POSTGRES_PASSWORD'] = 'postgres'
-    environ['POSTGRES_DB'] = 'Dados_RFB'
+from constants import TAMANHO_BLOCO
+
+def get_max_workers():
+    # Get the number of CPU cores
+    num_cores = cpu_count()
+
+    # Ajusta o numero de workers baseado nos requisitos
+    # Você deve dexar alguns cores livres para outras tarefas
+    max_workers = num_cores - 1 if num_cores else None
+
+    return max_workers
 
 def delete_var(var):
     try:
@@ -20,7 +22,7 @@ def delete_var(var):
         pass
 
 def repeat_token(token: str, n: int):
-    return ''.join([] ** n)
+    return ''.join([token] * n)
 
 def this_folder():
     # Get the path of the current file
@@ -31,11 +33,11 @@ def this_folder():
 
 # Create this bar_progress method which is invoked automatically from wget:
 def bar_progress(current, total, width=80):
-  progress_message = f"Downloading: {current / total * 100}%% [{current} / {total}] bytes - "
+    progress_message = "Downloading: %d%% [%d / %d] bytes - " % (current / total * 100, current, total)
   
-  # Don't use print() as it will print in new line every time.
-  stdout.write("\r" + progress_message)
-  stdout.flush()
+    # Don't use print() as it will print in new line every time.
+    stdout.write("\r" + progress_message)
+    stdout.flush()
 
 def check_diff(url, file_name):
     '''
@@ -58,17 +60,18 @@ def to_sql(dataframe, **kwargs):
     '''
     Quebra em pedacos a tarefa de inserir registros no banco
     '''
-    size = 4096
     total = len(dataframe)
     name = kwargs.get('name')
 
     def chunker(df):
-        return (df[i:i + size] for i in range(0, len(df), size))
+        return (df[i:i + TAMANHO_BLOCO] for i in range(0, len(df), TAMANHO_BLOCO))
 
     for i, df in enumerate(chunker(dataframe)):
         df.to_sql(**kwargs)
-        index = i * size
+        index = i * TAMANHO_BLOCO
         percent = (index * 100) / total
         progress = f'{name} {percent:.2f}% {index:0{len(str(total))}}/{total}'
         stdout.write(f'\r{progress}')
+    
+    print(f'\r{name} 100% {total}/{total}')
 

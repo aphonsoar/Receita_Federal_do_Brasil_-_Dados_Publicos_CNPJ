@@ -1,9 +1,11 @@
-from etl_pipeline import popular_tabela
 from timy import timer
-from os import getenv
-
+from os import getenv, path
 from sqlalchemy import create_engine
-from psycopg2 import connect, OperationalError
+from psycopg2 import connect, sql
+import pandas as pd
+
+from utils import repeat_token, delete_var, to_sql
+from constants import COMPRIMENTO_CERCA
 
 def connect_db():
     """
@@ -21,7 +23,7 @@ def connect_db():
         passw=getenv('POSTGRES_PASSWORD')
         host=getenv('POSTGRES_HOST')
         port=getenv('POSTGRES_PORT')
-        database=getenv('POSTGRES_NAME')
+        database=getenv('POSTGRES_DB')
 
         # Conectar:
         db_uri=f'postgresql://{user}:{passw}@{host}:{port}/{database}'
@@ -29,15 +31,104 @@ def connect_db():
         db_info=f'dbname={database} user={user} host={host} port={port} password={passw}'
         
         conn = connect(db_info)
-        cur = conn.cursor()
 
-        return engine, conn, cur
+        print('Conexão com o banco de dados estabelecida!')
+
+        return engine, conn
     
     except OperationalError as e:
         print(f"Error connecting to database: {e}")
         return None, None, None
 
-def popular_empresa(engine, cur, conn, extracted_files_path, arquivos_empresa):
+##########################################################################
+## LOAD AND TRANSFORM
+##########################################################################
+def inserir_dados(engine, file, table_name, columns, to_folder, 
+                    encoding, cleanse_transform_map):
+    print('Trabalhando no arquivo: ' + file + ' [...]')
+    artefato = pd.DataFrame(columns=list(range(0, len(columns))))
+    dtypes = {column: 'object' for column in columns}
+    extracted_file_path = path.join(to_folder, file)
+
+    artefato = pd.read_csv(
+        filepath_or_buffer=extracted_file_path,
+        sep=';',
+        skiprows=0,
+        header=None,
+        dtype=dtypes,
+        encoding=encoding,
+    )
+
+    # Tratamento do arquivo antes de inserir na base:
+    artefato = artefato.reset_index()
+    del artefato['index']
+
+    # Renomear colunas
+    artefato.columns = columns
+
+    artefato = cleanse_transform_map(artefato)
+
+    # Gravar dados no banco:
+    artefato.to_sql(name=table_name, con=engine, if_exists='append', index=False)
+    print('Arquivos ' + file + ' inserido com sucesso no banco de dados!')
+
+@timer('Popular tabela')
+def popular_tabela(
+    engine, conn, 
+    label: str, table_name: str, files: list,
+    columns: list, to_folder: str, 
+    encoding: str, cleanse_transform_map: lambda x: x
+):
+    fence=repeat_token('#', COMPRIMENTO_CERCA)
+    title=f'## Arquivos de {label.upper()}:'
+    header=f'{fence}\n{title}\n{fence}'
+    print(header)
+
+    # Drop table antes do insert
+    with conn.cursor() as cur:
+        query = sql.SQL('DROP TABLE IF EXISTS {};').format(sql.Identifier(table_name))
+        cur.execute(query)
+        conn.commit()
+
+    artefato = None
+
+    # Inserir dados
+    for file in files:
+        print('Trabalhando no arquivo: '+file+' [...]')
+        delete_var(artefato)
+
+        artefato = pd.DataFrame(columns=list(range(0, len(columns))))
+        dtypes = { column: 'object' for column in columns }
+        extracted_file_path = path.join(to_folder, file)
+
+        artefato = pd.read_csv(
+            filepath_or_buffer=extracted_file_path,
+            sep=';',
+            skiprows=0,
+            header=None,
+            dtype=dtypes,
+            encoding=encoding,
+        )
+
+        # Tratamento do arquivo antes de inserir na base:
+        artefato = artefato.reset_index()
+        del artefato['index']
+
+        # Renomear colunas
+        artefato.columns = columns
+
+        artefato = cleanse_transform_map(artefato)
+
+        # Gravar dados no banco:
+        to_sql(artefato, name=table_name, con=engine, if_exists='append', index=False)
+        print('Arquivos ' + file + ' inserido com sucesso no banco de dados!')
+
+        delete_var(artefato)
+
+        print(f'Arquivos de {label} finalizados!')
+
+
+def popular_empresa(engine, conn, extracted_files_path, arquivos_empresa):
     # Arquivos de empresa:
     def empresa_transform_map(artifact):
         # Replace "," por "."
@@ -53,13 +144,14 @@ def popular_empresa(engine, cur, conn, extracted_files_path, arquivos_empresa):
         'capital_social', 'porte_empresa', 'ente_federativo_responsavel'
     ]
 
-    popular_tabela(engine, cur, conn, 
+    popular_tabela(\
+        engine, conn, 
         'EMPRESA', 'empresa', arquivos_empresa,
         empresa_columns, extracted_files_path, 
         'latin-1', empresa_transform_map
     )
 
-def popular_estabelecimento(engine, cur, conn, extracted_files_path, arquivos_estabelecimento):
+def popular_estabelecimento(engine, conn, extracted_files_path, arquivos_estabelecimento):
     # Arquivos de estabelecimento:
     estabelecimento_columns=[
         'cnpj_basico',
@@ -95,12 +187,12 @@ def popular_estabelecimento(engine, cur, conn, extracted_files_path, arquivos_es
     ]
 
     popular_tabela(\
-        engine, cur, conn, 
+        engine, conn, 
         'Estabelecimento', 'estabelecimento', arquivos_estabelecimento,
         estabelecimento_columns, extracted_files_path, 'latin-1'
     )
 
-def popular_socios(engine, cur, conn, extracted_files_path, arquivos_socios):
+def popular_socios(engine, conn, extracted_files_path, arquivos_socios):
     # Arquivos de socios:
     socios_columns=['cnpj_basico',
                     'identificador_socio',
@@ -114,12 +206,12 @@ def popular_socios(engine, cur, conn, extracted_files_path, arquivos_socios):
                     'qualificacao_representante_legal',
                     'faixa_etaria']
 
-    popular_tabela(
-        engine, cur, conn, 'Socios', 'socios', arquivos_socios,
+    popular_tabela(\
+        engine, conn, 'Socios', 'socios', arquivos_socios,
         socios_columns, extracted_files_path, 'latin-1'
     )
 
-def popular_simples_nacional(engine, cur, conn, extracted_files_path, arquivos_simples):
+def popular_simples_nacional(engine, conn, extracted_files_path, arquivos_simples):
     simples_columns=['cnpj_basico',
                     'opcao_pelo_simples',
                     'data_opcao_simples',
@@ -128,119 +220,125 @@ def popular_simples_nacional(engine, cur, conn, extracted_files_path, arquivos_s
                     'data_opcao_mei',
                     'data_exclusao_mei']
 
-    popular_tabela(
-        engine, cur, conn, 
+    popular_tabela(\
+        engine, conn, 
         'Simples nacional', 'simples', arquivos_simples,
         simples_columns, extracted_files_path, 'latin-1'
     )
 
-def popular_cnae(engine, cur, conn, extracted_files_path, arquivos_cnae):
+def popular_cnae(engine, conn, extracted_files_path, arquivos_cnae):
     cnae_columns=['codigo', 'descricao']
 
-    cnae = popular_tabela(engine, cur, conn, 
+    popular_tabela(\
+        engine, conn, 
         'cnae', 'cnae', arquivos_cnae,
         cnae_columns, extracted_files_path, 'ANSI'
     )
 
-def popular_situacao_atual(engine, cur, conn, extracted_files_path, arquivos_moti):
+def popular_situacao_atual(engine, conn, extracted_files_path, arquivos_moti):
     cnae_columns=['codigo', 'descricao']
 
-    popular_tabela(engine, cur, conn, 
+    popular_tabela(\
+        engine, conn, 
         'motivos da situação atual', 'moti', arquivos_moti,
         cnae_columns, extracted_files_path, 'ANSI'
     )
 
-def popular_municipios(engine, cur, conn, extracted_files_path, arquivos_munic):
+def popular_municipios(engine, conn, extracted_files_path, arquivos_munic):
     munic_columns=['codigo', 'descricao']
 
-    popular_tabela(engine, cur, conn, 
+    popular_tabela(\
+        engine, conn, 
         'motivos da situação atual', 'moti', arquivos_munic,
         munic_columns, extracted_files_path, 'ANSI'
     )
 
-def popular_natureza_juridica(engine, cur, conn, extracted_files_path, arquivos_natju):
+def popular_natureza_juridica(engine, conn, extracted_files_path, arquivos_natju):
     natju_columns=['codigo', 'descricao']
 
-    popular_tabela(engine, cur, conn, 
+    popular_tabela(\
+        engine, conn, 
         'natureza jurídica', 'natju', arquivos_natju,
         natju_columns, extracted_files_path, 'ANSI'
     )
 
-def popular_pais(engine, cur, conn, extracted_files_path, arquivos_pais):
+def popular_pais(engine, conn, extracted_files_path, arquivos_pais):
     pais_columns=['codigo', 'descricao']
 
-    popular_tabela(engine, cur, conn, 
+    popular_tabela(\
+        engine, conn, 
         'país', 'pais', arquivos_pais,
         pais_columns, extracted_files_path, 'ANSI'
     )
 
-def popular_quals(engine, cur, conn, extracted_files_path, arquivos_quals):
+def popular_quals(engine, conn, extracted_files_path, arquivos_quals):
     quals_columns=['codigo', 'descricao']
 
-    popular_tabela(engine, cur, conn, 
+    popular_tabela(\
+        engine, conn, 
         'qualificação de sócios', 'quals', arquivos_quals,
         quals_columns, extracted_files_path, 'ANSI'
     )
 
 @timer(ident='Popular banco')
-def popular_banco(engine, conn, cur, extracted_files_path, arquivos):
+def popular_banco(engine, conn, extracted_files_path, arquivos):
     #######################
     ## Arquivos de EMPRESA:
     #######################
     popular_empresa(
-        engine, cur, conn, extracted_files_path, arquivos['empresa']
+        engine, conn, extracted_files_path, arquivos['empresa']
     )
-
+    
     ###################################
     ## Arquivos de Estabelecimento:
     ###################################
     popular_estabelecimento(
-        engine, cur, conn, extracted_files_path, arquivos['estabelecimento']
+        engine, conn, extracted_files_path, arquivos['estabelecimento']
     )
 
     ######################
     ## Arquivos de SOCIOS:
     ######################
     popular_socios(
-        engine, cur, conn, extracted_files_path, arquivos['socios']
+        engine, conn, extracted_files_path, arquivos['socios']
     )
 
     ################################
     ## Arquivos do SIMPLES NACIONAL:
     ################################
     popular_simples_nacional(
-        engine, cur, conn, extracted_files_path, arquivos['simples']
+        engine, conn, extracted_files_path, arquivos['simples']
     )
 
     ######################
     ## Arquivos de cnae:
     ######################
-    popular_cnae(engine, cur, conn, extracted_files_path, arquivos['cnae'])
+    popular_cnae(engine, conn, extracted_files_path, arquivos['cnae'])
 
     #########################################
     ## Arquivos de motivos da situação atual:
     #########################################
-    popular_situacao_atual(engine, cur, conn, extracted_files_path, arquivos['moti'])
+    popular_situacao_atual(engine, conn, extracted_files_path, arquivos['moti'])
 
     ##########################
     ## Arquivos de municípios:
     ##########################
-    popular_municipios(engine, cur, conn, extracted_files_path, arquivos['munic'])
+    popular_municipios(engine, conn, extracted_files_path, arquivos['munic'])
 
     #################################
     ## Arquivos de natureza jurídica:
     #################################
-    popular_natureza_juridica(engine, cur, conn, extracted_files_path, arquivos['natju'])
+    popular_natureza_juridica(engine, conn, extracted_files_path, arquivos['natju'])
 
     ######################
     ## Arquivos de país:
     ######################
-    popular_pais(engine, cur, conn, extracted_files_path, arquivos['pais'])
+    popular_pais(engine, conn, extracted_files_path, arquivos['pais'])
 
     ######################################
     ## Arquivos de qualificação de sócios:
     ######################################
-    popular_quals(engine, cur, conn, extracted_files_path, arquivos['quals'])
+    popular_quals(engine, conn, extracted_files_path, arquivos['quals'])
 
 @timer('Criar indices do banco')
 def criar_indices_banco(conn, cur):

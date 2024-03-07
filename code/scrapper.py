@@ -4,7 +4,7 @@ from urllib import request
 from bs4 import BeautifulSoup
 
 from utils import delete_var
-from URLS import DADOS_RF_URL 
+from urls import DADOS_RF_URL 
 
 def raspar_receita_federal():
     raw_html = request.urlopen(DADOS_RF_URL)
@@ -15,25 +15,25 @@ def raspar_receita_federal():
     html_str = str(page_items)
 
     # Obter arquivos
-    Files = []
+    files = []
     text = '.zip'
     for m in re.finditer(text, html_str):
         i_start = m.start()-40
         i_end = m.end()
         i_loc = html_str[i_start:i_end].find('href=')+6
-        Files.append(html_str[i_start+i_loc:i_end])
+        files.append(html_str[i_start+i_loc:i_end])
     
-    Files_clean = []
-    for i in range(len(Files)):
-        if not Files[i].find('.zip">') > -1:
-            Files_clean.append(Files[i])
+    files_clean = []
+    for i in range(len(files)):
+        if not files[i].find('.zip">') > -1:
+            files_clean.append(files[i])
 
-    delete_var(Files)
+    delete_var(files)
     
     print('Arquivos que serão baixados:')
     i_f = 0
-    for f in Files_clean:
+    for f in files_clean:
         i_f += 1
         print(str(i_f) + ' - ' + f)
 
-    return Files_clean
+    return files_clean

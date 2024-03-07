@@ -1,6 +1,9 @@
+from setup import setup_etl
 from setup import set_output_folders
-# from etl_pipeline import buscar_dados_receita_federal
-# from database_utils import popular_banco, criar_indices_banco
+
+from etl_pipeline import buscar_dados_receita_federal, \
+  ler_dados_receita_federal
+from database_utils import popular_banco, criar_indices_banco
 
 print(
     """ 
@@ -21,11 +24,13 @@ print(
 # simples = 27.893.923
 # ###############################
 
-output_files_path, extracted_files_path = set_output_folders()
-# print(output_files_path, extracted_files_path, engine, conn, cur)
+output_files_path, extracted_files_path, engine, conn = setup_etl()
+# buscar_dados_receita_federal(output_files_path, extracted_files_path)
 
-# arquivos = buscar_dados_receita_federal(output_files_path, extracted_files_path)
-# popular_banco(engine, cur, conn, extracted_files_path, arquivos)
-# criar_indices_banco(conn, cur)
+# Ler e inserir dados
+arquivos = ler_dados_receita_federal(extracted_files_path)
+
+popular_banco(engine, conn, extracted_files_path, arquivos)
+criar_indices_banco(conn)
 
 print("""Fim do processo! Você pode utilizar o banco de dados!""")
