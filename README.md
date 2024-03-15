@@ -1,8 +1,8 @@
 # Dados Públicos CNPJ
-- Fonte oficial da Receita Federal do Brasil, [aqui](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-jurdica---cnpj).
+- Fonte oficial da Receita Federal do Brasil, [aqui](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj).
 - Layout dos arquivos, [aqui](https://www.gov.br/receitafederal/dados/cnpj-metadados.pdf).
 
-A Receita Federal do Brasil disponibiliza bases com os dados públicos do cadastro nacional de pessoas jurídicas (CNPJ). 
+A Receita Federal do Brasil disponibiliza bases com os dados públicos do cadastro nacional de pessoas jurídicas (CNPJ).
 
 De forma geral, nelas constam as mesmas informações que conseguimos ver no cartão do CNPJ, quando fazemos uma consulta individual, acrescidas de outros dados de Simples Nacional, sócios e etc. Análises muito ricas podem sair desses dados, desde econômicas, mercadológicas até investigações.
 
@@ -13,7 +13,7 @@ Nesse repositório consta um processo de ETL para **i)** baixar os arquivos; **i
 ### Infraestrutura necessária:
 - [Python 3.8](https://www.python.org/downloads/release/python-3810/)
 - [PostgreSQL 14.2](https://www.postgresql.org/download/)
-  
+
 ---------------------
 
 ### How to use:
@@ -24,8 +24,8 @@ Nesse repositório consta um processo de ETL para **i)** baixar os arquivos; **i
    - `EXTRACTED_FILES_PATH`: diretório de destino para a extração dos arquivos .zip
    - `DB_USER`: usuário do banco de dados criado pelo arquivo `banco_de_dados.sql`
    - `DB_PASSWORD`: senha do usuário do BD
-   - `DB_HOST`: host da conexão com o BD 
-   - `DB_PORT`: porta da conexão com o BD 
+   - `DB_HOST`: host da conexão com o BD
+   - `DB_PORT`: porta da conexão com o BD
    - `DB_NAME`: nome da base de dados na instância (`Dados_RFB` - conforme arquivo `banco_de_dados.sql`)
 
 3. Instale as bibliotecas necessárias, disponíveis em `requirements.txt`:
@@ -36,7 +36,7 @@ pip install -r requirements.txt
 4. Execute o arquivo `ETL_coletar_dados_e_gravar_BD.py` e aguarde a finalização do processo.
    - Os arquivos são grandes. Dependendo da infraestrutura isso deve levar muitas horas para conclusão.
    - Arquivos de 08/05/2021: `4,68 GB` compactados e `17,1 GB` descompactados.
-    
+
 ---------------------
 
 ### Tabelas geradas:
@@ -46,7 +46,7 @@ pip install -r requirements.txt
   - `socios`: dados cadastrais dos sócios das empresas
   - `simples`: dados de MEI e Simples Nacional
   - `cnae`: código e descrição dos CNAEs
-  - `quals`: tabela de qualificação das pessoas físicas - sócios, responsável e representante legal.  
+  - `quals`: tabela de qualificação das pessoas físicas - sócios, responsável e representante legal.
   - `natju`: tabela de naturezas jurídicas - código e descrição.
   - `moti`: tabela de motivos da situação cadastral - código e descrição.
   - `pais`: tabela de países - código e descrição.
