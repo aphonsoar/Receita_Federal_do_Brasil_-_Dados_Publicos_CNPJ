@@ -1,13 +1,14 @@
 from timy import timer
 from os import getenv, path
 from sqlalchemy import create_engine
-from psycopg2 import connect, sql
+
+from psycopg2 import connect, sql, OperationalError
 import pandas as pd
 
 from utils import repeat_token, delete_var, to_sql
 from constants import COMPRIMENTO_CERCA
 
-def connect_db():
+def conectar_banco():
     """
     Connects to a PostgreSQL database using environment variables for connection details.
 
@@ -38,13 +39,14 @@ def connect_db():
     
     except OperationalError as e:
         print(f"Error connecting to database: {e}")
-        return None, None, None
+        return None, None
 
 ##########################################################################
 ## LOAD AND TRANSFORM
 ##########################################################################
 def inserir_dados(engine, file, table_name, columns, to_folder, 
                     encoding, cleanse_transform_map):
+    
     print('Trabalhando no arquivo: ' + file + ' [...]')
     artefato = pd.DataFrame(columns=list(range(0, len(columns))))
     dtypes = {column: 'object' for column in columns}
@@ -86,7 +88,8 @@ def popular_tabela(
 
     # Drop table antes do insert
     with conn.cursor() as cur:
-        query = sql.SQL('DROP TABLE IF EXISTS {};').format(sql.Identifier(table_name))
+        identifier = sql.Identifier(table_name)
+        query = sql.SQL('DROP TABLE IF EXISTS {};').format(identifier)
         cur.execute(query)
         conn.commit()
 
