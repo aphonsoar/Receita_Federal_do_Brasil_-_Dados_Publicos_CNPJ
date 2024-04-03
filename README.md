@@ -6,11 +6,20 @@ A Receita Federal do Brasil disponibiliza bases com os dados públicos do cadast
 
 De forma geral, nelas constam as mesmas informações que conseguimos ver no cartão do CNPJ, quando fazemos uma consulta individual, acrescidas de outros dados de Simples Nacional, sócios e etc. Análises muito ricas podem sair desses dados, desde econômicas, mercadológicas até investigações.
 
-Nesse repositório consta um processo de ETL para **i)** baixar os arquivos; **ii)** descompactar; **iii)** ler, tratar e **iv)** inserir num banco de dados relacional PostgreSQL.
+Nesse repositório consta um processo de ETL para: 
+
+  **i)** baixar os arquivos; 
+  
+  **ii)** descompactar; 
+  
+  **iii)** ler e tratar
+  
+  **iv)** inserir num banco de dados relacional PostgreSQL.
 
 ---------------------
 
 ### Infraestrutura necessária:
+
 - [Python 3.8](https://www.python.org/downloads/release/python-3810/)
 - [PostgreSQL 14.2](https://www.postgresql.org/download/)
   
