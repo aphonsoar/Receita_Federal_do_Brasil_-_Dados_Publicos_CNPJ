@@ -1,6 +1,5 @@
 from setup import configurar_etl
-
-from etl_pipeline import buscar_dados_receita_federal, carregar_banco
+from etl_pipeline import buscar_dados, carregar_banco
 
 print(
     """ 
@@ -12,7 +11,6 @@ print(
 )
 
 # Tempo de execução do processo (em segundos): 17.770 (4hrs e 57 min)
-
 # ###############################
 # Tamanho dos arquivos (Linhas):
 # empresa = 45.811.638
@@ -23,8 +21,8 @@ print(
 
 output_files_path, extracted_files_path, engine, conn = configurar_etl()
 
-# Carregar dados
-buscar_dados_receita_federal(output_files_path, extracted_files_path)
+# # Buscar dados
+# buscar_dados(output_files_path, extracted_files_path)
 
 # Carregar banco
 carregar_banco(engine, conn, extracted_files_path)

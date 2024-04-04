@@ -38,5 +38,5 @@ def configurar_etl():
     
     output_files_path, extracted_files_path = definir_pastas_destino()
     engine, conn = conectar_banco()
-
+    
     return output_files_path, extracted_files_path, engine, conn

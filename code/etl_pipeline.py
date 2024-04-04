@@ -3,12 +3,18 @@ from os import path, listdir
 from timy import timer
 from zipfile import ZipFile
 from tqdm import tqdm
+from threading import Lock
+from os import rmdir
+
+lock = Lock()
 
 from utils import check_diff
 from scrapper import raspar_receita_federal
 from utils import get_max_workers
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from urls import DADOS_RF_URL, LAYOUT_URL
+
+from database_utils import popular_banco, criar_indices_banco
 
 ##########################################################################
 ## LER E INSERIR DADOS ###################################################
@@ -81,18 +87,21 @@ def baixar_e_extrair_arquivo(url, download_path, extracted_path):
     if not path.exists(full_path) or check_diff(url, full_path):
         try:
             # Assuming download updates progress bar itself
-            print('Baixando:', file_name)
-            download(url, out=download_path)
-            
-            print('Extraindo:', file_name)
+            download(url, out=download_path, bar=None)
+
+            # Assuming extraction updates progress bar itself
             extrair_arquivo(full_path, extracted_path)
 
         except OSError as e:
-            raise OSError(f"Error downloading {url} or extracting file {file_name}: {e}") from e    
-
+            raise OSError(f"Error downloading {url} or extracting file {file_name}: {e}") from e        
     
 @timer('Baixar e extrair arquivos da Receita Federal')
-def baixar_e_extrair_dados_da_receita_federal(base_files, output_path, extracted_path, max_workers=get_max_workers()):
+def baixar_e_extrair_dados_da_receita_federal(
+    base_files, 
+    output_path, extracted_path, 
+    is_parallel = True,
+    max_workers=get_max_workers()
+):
     """Downloads files from the Receita Federal base URLs to the specified output path.
 
     Args:
@@ -104,33 +113,35 @@ def baixar_e_extrair_dados_da_receita_federal(base_files, output_path, extracted
         OSError: If an error occurs during the download process.
     """
 
-    counter = 0
-    total_count = len(base_files)
-    for index, base_file in enumerate(base_files):
-        baixar_e_extrair_arquivo(DADOS_RF_URL + base_file, output_path, extracted_path)
+    if(is_parallel):
+        with tqdm(total=len(base_files)) as pbar:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = [
+                    (base_file, 
+                        executor.submit(
+                            baixar_e_extrair_arquivo, 
+                            DADOS_RF_URL + base_file, 
+                            output_path, 
+                            extracted_path
+                        )
+                    )
+                    for base_file in base_files
+                ]
 
-        # Update progress bar after download (success or failure)
-        counter = counter + 1
-
-        print(f"{index}/{total_count} arquivos baixados.")
-
-    '''
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        with tqdm(total=len(base_files), desc="Baixando arquivos") as pbar:
-            futures = [
-                (
-                    base_file, 
-                    executor.submit(baixar_arquivo, DADOS_RF_URL + base_file, output_path, extracted_path, pbar)
-                )
-                for base_file in base_files
-            ]
-
-            for base_file, future in futures:
-                try:
+                for future in as_completed(futures):
+                    pbar.update(1)
                     future.result()
-                except OSError as e:
-                    print(f"Error downloading {DADOS_RF_URL + base_file}: {e}")
-    '''
+
+    else:
+        counter = 0
+        total_count = len(base_files)
+        for index, base_file in enumerate(base_files):
+            baixar_e_extrair_arquivo(DADOS_RF_URL + base_file, output_path, extracted_path)
+
+            # Update progress bar after download (success or failure)
+            counter = counter + 1
+
+            print(f"{index}/{total_count} arquivos baixados.")
 
     # Download layout (assuming download remains unchanged)
     print("Baixando layout:")
@@ -140,10 +151,10 @@ def baixar_e_extrair_dados_da_receita_federal(base_files, output_path, extracted
 ## EXTRAÇÃO ##############################################################
 ##########################################################################
 def extrair_dados_receita_federal(
-        base_files, 
-        output_files_path, 
-        extracted_files_path, 
-        max_workers = get_max_workers()
+    base_files, 
+    output_files_path, 
+    extracted_files_path, 
+    max_workers = get_max_workers()
 ):
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Use tqdm as a context manager to automatically handle progress bar updates
@@ -160,15 +171,17 @@ def extrair_dados_receita_federal(
                 future.result()
 
 @timer('Buscar dados da Receita Federal')
-def buscar_dados_receita_federal(output_files_path, extracted_files_path):
+def buscar_dados(output_files_path, extracted_files_path):
     # Raspar dados da página 
     base_files = raspar_receita_federal()
 
     # Baixar arquivos e extrair arquivos
     baixar_e_extrair_dados_da_receita_federal(base_files, output_files_path, extracted_files_path)
+    
+    # Deletar arquivos baixados
+    rmdir(output_files_path)
 
 def carregar_banco(engine, conn, extracted_files_path):
-    from database_utils import popular_banco, criar_indices_banco
 
     # Ler e inserir dados
     arquivos = ler_dados_receita_federal(extracted_files_path)

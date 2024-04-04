@@ -79,7 +79,7 @@ def popular_tabela(
     engine, conn, 
     label: str, table_name: str, files: list,
     columns: list, to_folder: str, 
-    encoding: str, cleanse_transform_map: lambda x: x
+    encoding: str, cleanse_transform_map: callable = lambda x: x
 ):
     fence=repeat_token('#', COMPRIMENTO_CERCA)
     title=f'## Arquivos de {label.upper()}:'
@@ -344,7 +344,9 @@ def popular_banco(engine, conn, extracted_files_path, arquivos):
     popular_quals(engine, conn, extracted_files_path, arquivos['quals'])
 
 @timer('Criar indices do banco')
-def criar_indices_banco(conn, cur):
+def criar_indices_banco(conn):
+    cur = conn.cursor()
+
     print("""
     #############################################
     ## Processo de carga dos arquivos finalizado!
