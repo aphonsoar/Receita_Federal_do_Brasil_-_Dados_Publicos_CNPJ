@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from src.utils.misc import check_diff, get_max_workers
 from src.core.scrapper import scrap_RF
 from src.utils.database import populate_database, generate_database_indices
-from src.constants import TABLES_INFO_DICT, DADOS_RF_URL, LAYOUT_URL
+from src.core.constants import TABLES_INFO_DICT, DADOS_RF_URL, LAYOUT_URL
 
 ####################################################################################################
 ## LER E INSERIR DADOS #############################################################################

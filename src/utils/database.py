@@ -6,8 +6,8 @@ from psycopg2 import connect, sql, OperationalError, errors
 import pandas as pd
 
 from src.utils.misc import repeat_token, delete_var, to_sql
-from constants import FENCE, TABLES_INFO_DICT
-from models import Database, TableInfo
+from src.core.constants import FENCE, TABLES_INFO_DICT
+from src.core.models import Database, TableInfo
 
 def setup_database() -> Union[Database, None]:
     """

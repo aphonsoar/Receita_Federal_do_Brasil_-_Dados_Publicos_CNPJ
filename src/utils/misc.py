@@ -3,7 +3,7 @@ from os import path, remove, cpu_count
 from requests import head
 from os import path, makedirs
 
-from constants import CHUNK_SIZE
+from src.core.constants import CHUNK_SIZE
 
 def makedir(
     folder_name: str, 

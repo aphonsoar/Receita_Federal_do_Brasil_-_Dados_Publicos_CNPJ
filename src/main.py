@@ -1,4 +1,4 @@
-from src.setup import setup_etl
+from src.core.setup import setup_etl
 from src.core.etl import get_RF_data, load_database
 
 print(
@@ -21,7 +21,7 @@ print(
 #   - Municípios: 0.45 s
 #   - Natureza jurídica: 0.45 s
 #   - País: 0.45 s
-#   - Qualificação de sócios: 
+#   - Qualificação de sócios: 0.03 s
 # 
 # #############################################################################################
 # Tamanho dos arquivos (Linhas):
@@ -33,9 +33,9 @@ print(
 output_files_path, extracted_files_path, database = setup_etl()
 
 # # Buscar dados
-# get_RF_data(output_files_path, extracted_files_path, False)
+get_RF_data(output_files_path, extracted_files_path, False)
 
 # Carregar banco
-load_database(database, extracted_files_path)
+# load_database(database, extracted_files_path)
 
 print("""Fim do processo! Você pode utilizar o banco de dados!""")
