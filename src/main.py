@@ -1,5 +1,5 @@
-from src.core.setup import setup_etl
-from src.core.etl import get_RF_data, load_database
+from core.setup import setup_etl
+from core.etl import get_RF_data, load_database
 
 print(
   """ 
@@ -30,12 +30,12 @@ print(
 # socios = 20.426.417
 # simples = 27.893.923
 # #############################################################################################
-output_files_path, extracted_files_path, database = setup_etl()
+database, output_files_path, extracted_files_path = setup_etl()
 
 # # Buscar dados
-get_RF_data(output_files_path, extracted_files_path, False)
+get_RF_data(output_files_path, extracted_files_path)
 
 # Carregar banco
-# load_database(database, extracted_files_path)
+load_database(database, extracted_files_path)
 
 print("""Fim do processo! Você pode utilizar o banco de dados!""")

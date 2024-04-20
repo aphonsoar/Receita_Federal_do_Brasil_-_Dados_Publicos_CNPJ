@@ -2,8 +2,8 @@ import re
 from urllib import request
 from bs4 import BeautifulSoup
 
-from src.utils.misc import delete_var
-from src.core.constants import DADOS_RF_URL 
+from utils.misc import delete_var
+from core.constants import DADOS_RF_URL 
 
 def scrap_RF():
     raw_html = request.urlopen(DADOS_RF_URL)

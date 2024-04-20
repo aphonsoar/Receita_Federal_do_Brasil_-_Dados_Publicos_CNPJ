@@ -6,10 +6,10 @@ from tqdm import tqdm
 from os import rmdir
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from src.utils.misc import check_diff, get_max_workers
-from src.core.scrapper import scrap_RF
-from src.utils.database import populate_database, generate_database_indices
-from src.core.constants import TABLES_INFO_DICT, DADOS_RF_URL, LAYOUT_URL
+from utils.misc import check_diff, get_max_workers
+from core.scrapper import scrap_RF
+from utils.database import populate_database, generate_database_indices
+from core.constants import TABLES_INFO_DICT, DADOS_RF_URL, LAYOUT_URL
 
 ####################################################################################################
 ## LER E INSERIR DADOS #############################################################################
@@ -52,6 +52,8 @@ def download_and_extract_files(url, download_path, extracted_path, has_progress_
         OSError: If an error occurs during the download process.
     """
     file_name = path.basename(url)
+    print(download_path)
+    print(file_name)
     full_path = path.join(download_path, file_name)
 
     if not path.exists(full_path) or check_diff(url, full_path):

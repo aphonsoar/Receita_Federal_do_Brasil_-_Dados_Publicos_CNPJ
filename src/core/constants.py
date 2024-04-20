@@ -1,4 +1,5 @@
-from src.utils.misc import repeat_token
+def repeat_token(token: str, n: int):
+    return ''.join([token] * n)
 
 # Sourc
 LAYOUT_URL = 'https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/arquivos/NOVOLAYOUTDOSDADOSABERTOSDOCNPJ.pdf'

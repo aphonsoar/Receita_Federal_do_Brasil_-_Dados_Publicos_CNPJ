@@ -3,7 +3,7 @@ from os import path, remove, cpu_count
 from requests import head
 from os import path, makedirs
 
-from src.core.constants import CHUNK_SIZE
+from core.constants import CHUNK_SIZE
 
 def makedir(
     folder_name: str, 
@@ -17,7 +17,7 @@ def makedir(
 
     else:
         if(is_verbose):
-        print(f'Folder {repr(str(folder_name))} already exists!')
+            print(f'Folder {repr(str(folder_name))} already exists!')
 
 def get_max_workers():
     # Get the number of CPU cores
@@ -34,9 +34,6 @@ def delete_var(var):
         del var
     except:
         pass
-
-def repeat_token(token: str, n: int):
-    return ''.join([token] * n)
 
 def this_folder():
     # Get the path of the current file
