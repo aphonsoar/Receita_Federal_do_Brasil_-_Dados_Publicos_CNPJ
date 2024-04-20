@@ -2,6 +2,7 @@ from sys import stdout
 from os import path, remove, cpu_count
 from requests import head
 from os import path, makedirs
+import pandas as pd
 
 from core.constants import CHUNK_SIZE
 
@@ -67,7 +68,10 @@ def check_diff(url, file_name):
 
     return False # arquivos sao iguais
 
-def to_sql(dataframe, **kwargs):
+def to_sql(
+    dataframe: pd.DataFrame, 
+    **kwargs
+):
     '''
     Quebra em pedacos a tarefa de inserir registros no banco
     '''

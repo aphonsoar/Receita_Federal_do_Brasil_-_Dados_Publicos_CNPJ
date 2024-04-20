@@ -1,7 +1,12 @@
 from os import makedirs, getenv, environ, path, getcwd
 from dotenv import load_dotenv
 
-from utils.database import setup_database
+from os import getenv, path
+from typing import Union
+from sqlalchemy import create_engine
+from psycopg2 import connect, OperationalError
+
+from core.models import Database
 from utils.misc import makedir 
 
 def get_sink_folder():
@@ -18,9 +23,44 @@ def get_sink_folder():
 
     return output_files, extracted_files
 
+def setup_database() -> Union[Database, None]:
+    """
+    Connects to a PostgreSQL database using environment variables for connection details.
+
+    Returns:
+        Database: A NamedTuple with engine and conn attributes for the database connection.
+        None: If there was an error connecting to the database.
+    
+    >>> setup_database()
+    """
+    
+    try:
+        # Get environment variables
+        user = getenv('POSTGRES_USER')
+        passw = getenv('POSTGRES_PASSWORD')
+        host = getenv('POSTGRES_HOST', 'localhost')
+        port = getenv('POSTGRES_PORT', '5432')
+        database_name = getenv('POSTGRES_NAME')
+        
+        # Connect to the database
+        db_uri = f'postgresql://{user}:{passw}@{host}:{port}/{database_name}'
+        engine = create_engine(db_uri)
+        
+        db_info = f'dbname={database_name} user={user} host={host} port={port} password={passw}'
+        
+        conn = connect(db_info)
+
+        print('Connection to the database established!')
+        return Database(engine, conn)
+    
+    except OperationalError as e:
+        print(f"Error connecting to database: {e}")
+        return None
+
 def setup_etl():
     # Load to environment variables
-    load_dotenv()
+    env_path = path.join(getcwd(), '.env')
+    load_dotenv(env_path)
 
     # Folders to 
     output_files_path, extracted_files_path = get_sink_folder()

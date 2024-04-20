@@ -9,39 +9,6 @@ from utils.misc import delete_var, to_sql
 from core.constants import FENCE, TABLES_INFO_DICT
 from core.models import Database, TableInfo
 
-def setup_database() -> Union[Database, None]:
-    """
-    Connects to a PostgreSQL database using environment variables for connection details.
-
-    Returns:
-        Database: A NamedTuple with engine and conn attributes for the database connection.
-        None: If there was an error connecting to the database.
-    
-    >>> setup_database()
-    """
-    
-    try:
-        # Get environment variables
-        user = getenv('POSTGRES_USER')
-        passw = getenv('POSTGRES_PASSWORD')
-        host = getenv('POSTGRES_HOST', 'localhost')
-        port = getenv('POSTGRES_PORT', '5432')
-        database = getenv('POSTGRES_DB')
-
-        # Connect to the database
-        db_uri = f'postgresql://{user}:{passw}@{host}:{port}/{database}'
-        engine = create_engine(db_uri)
-        
-        db_info = f'dbname={database} user={user} host={host} port={port} password={passw}'
-        conn = connect(db_info)
-
-        print('Connection to the database established!')
-        return Database(engine, conn)
-    
-    except OperationalError as e:
-        print(f"Error connecting to database: {e}")
-        return None
-
 ##########################################################################
 ## LOAD AND TRANSFORM
 ##########################################################################
@@ -66,7 +33,6 @@ def insert_data_on_database(
 
     # Renomear colunas
     artefato.columns = columns
-
     artefato = cleanse_transform_map(artefato)
 
     # Gravar dados no banco:
@@ -137,11 +103,11 @@ def populate_database(database, from_folder, files):
     table_names = list(TABLES_INFO_DICT.keys())
 
     for table_name in table_names:
-        label = TABLES_INFO_DICT['label']
-        columns = TABLES_INFO_DICT['columns']
-        expression = TABLES_INFO_DICT['expression']
-        transform_map = TABLES_INFO_DICT['transform_map']
-        encoding = TABLES_INFO_DICT['encoding']
+        label = TABLES_INFO_DICT[table_name]['label']
+        columns = TABLES_INFO_DICT[table_name]['columns']
+        expression = TABLES_INFO_DICT[table_name]['expression']
+        encoding = TABLES_INFO_DICT[table_name]['encoding']
+        transform_map = TABLES_INFO_DICT[table_name].get('transform_map', lambda x: x)
 
         table_info = TableInfo(label, table_name, columns, encoding, transform_map)
         populate_table_with_filenames(database, table_info, from_folder, files[table_name])

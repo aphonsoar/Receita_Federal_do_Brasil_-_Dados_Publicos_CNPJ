@@ -3,7 +3,7 @@ from os import path, listdir
 from timy import timer
 from zipfile import ZipFile
 from tqdm import tqdm
-from os import rmdir
+from shutil import rmtree
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from utils.misc import check_diff, get_max_workers
@@ -18,18 +18,22 @@ from core.constants import TABLES_INFO_DICT, DADOS_RF_URL, LAYOUT_URL
 def get_RF_filenames(extracted_files_path):
     # Files:
     items = [ name for name in listdir(extracted_files_path) if name.endswith('') ]
-
+    
     # Separar arquivos:
     files = {
         table_name: [] for table_name in TABLES_INFO_DICT.keys()
     }
 
-    labels_list = [ table_info['label'] for table_info in TABLES_INFO_DICT.values() ]
-    has_label_map = lambda label: item.find(label) > -1
-    for item in items:
-        this_label = list(filter(has_label_map, labels_list))[0]
+    tablename_list = [ table_name for table_name in TABLES_INFO_DICT.keys() ]
+    trimmed_tablename_list = [ table_name[:5] for table_name in TABLES_INFO_DICT.keys() ]
+    
+    tablename_tuples = list(zip(tablename_list, trimmed_tablename_list))
 
-        files[this_label].append(item)
+    for item in items:
+        has_label_map = lambda label: item.lower().find(label[1].lower()) > -1
+        this_tablename = list(filter(has_label_map, tablename_tuples))[0][0]
+        
+        files[this_tablename].append(item)
 
     return files
 
@@ -52,7 +56,6 @@ def download_and_extract_files(url, download_path, extracted_path, has_progress_
         OSError: If an error occurs during the download process.
     """
     file_name = path.basename(url)
-    print(download_path)
     print(file_name)
     full_path = path.join(download_path, file_name)
 
@@ -77,24 +80,21 @@ def get_rf_filenames_parallel(
     extracted_path: str,
     max_workers = get_max_workers()
 ):
-    with tqdm(total=len(base_files)) as pbar:
-        with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            futures = [
-                (base_file, 
-                    executor.submit(
-                        download_and_extract_files, 
-                        DADOS_RF_URL + base_file, 
-                        output_path, 
-                        extracted_path,
-                        False
-                    )
-                )
-                for base_file in base_files
-            ]
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = [
+            executor.submit(
+                download_and_extract_files, 
+                DADOS_RF_URL + base_file, 
+                output_path, 
+                extracted_path,
+                False
+            )
+            for base_file in base_files
+        ]
 
-            for future in as_completed(futures):
-                pbar.update(1)
-                future.result()
+        for future in tqdm(as_completed(futures), total=len(base_files)):
+            pass
 
 def get_rf_filenames_serial(
     base_files: list,
@@ -148,7 +148,7 @@ def download_and_extract_RF_data(
         get_rf_filenames_serial(base_files, output_path, extracted_path)
 
     # Download layout (assuming download remains unchanged)
-    print("Baixando layout:")
+    print("Baixando layout...")
     download(LAYOUT_URL, out=output_path, bar=None)
 
 ####################################################################################################
@@ -183,7 +183,7 @@ def get_RF_data(to_folder, from_folder, is_parallel=True):
     download_and_extract_RF_data(base_files, to_folder, from_folder, is_parallel)
 
     # Deletar arquivos baixados
-    rmdir(to_folder)
+    rmtree(to_folder)
 
 def load_database(database, from_folder):
     # Lê e insere dados

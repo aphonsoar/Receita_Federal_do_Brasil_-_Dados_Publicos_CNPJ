@@ -1,11 +1,8 @@
 from typing import NamedTuple, List
 
-from sqlalchemy import create_engine
-from psycopg2 import connect
-
 class Database(NamedTuple):
-    engine: create_engine
-    conn: connect
+    engine: callable
+    conn: callable
 
 class TableInfo(NamedTuple):
     label: str
