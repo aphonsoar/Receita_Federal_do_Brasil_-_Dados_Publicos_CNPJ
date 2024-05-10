@@ -1,4 +1,6 @@
-from datetime import date
+import datetime
+import gc
+import pathlib
 from dotenv import load_dotenv
 from sqlalchemy import create_engine
 import bs4 as bs
@@ -47,7 +49,7 @@ def to_sql(dataframe, **kwargs):
     '''
     Quebra em pedacos a tarefa de inserir registros no banco
     '''
-    size = 4096
+    size = 4096  #TODO param
     total = len(dataframe)
     name = kwargs.get('name')
 
@@ -60,16 +62,22 @@ def to_sql(dataframe, **kwargs):
         percent = (index * 100) / total
         progress = f'{name} {percent:.2f}% {index:0{len(str(total))}}/{total}'
         sys.stdout.write(f'\r{progress}')
+    sys.stdout.write('\n')
 
 #%%
 # Ler arquivo de configuração de ambiente # https://dev.to/jakewitcher/using-env-files-for-environment-variables-in-python-applications-55a1
 def getEnv(env):
     return os.getenv(env)
 
-print('Especifique o local do seu arquivo de configuração ".env". Por exemplo: C:\...\Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ\code')
-# C:\Aphonso_C\Git\Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ\code
-local_env = input()
-dotenv_path = os.path.join(local_env, '.env')
+
+current_path = pathlib.Path().resolve()
+dotenv_path = os.path.join(current_path, '.env')
+if not os.path.isfile(dotenv_path):
+    print('Especifique o local do seu arquivo de configuração ".env". Por exemplo: C:\...\Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ\code')
+    # C:\Aphonso_C\Git\Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ\code
+    local_env = input()
+    dotenv_path = os.path.join(local_env, '.env')
+print(dotenv_path)
 load_dotenv(dotenv_path=dotenv_path)
 
 dados_rf = 'http://200.152.38.155/CNPJ/'
@@ -154,9 +162,10 @@ for l in Files:
 
 #%%
 # Download layout:
-Layout = 'https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/arquivos/NOVOLAYOUTDOSDADOSABERTOSDOCNPJ.pdf'
-print('Baixando layout:')
-wget.download(Layout, out=output_files, bar=bar_progress)
+# FIXME está pedindo login gov.br
+# Layout = 'https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/arquivos/NOVOLAYOUTDOSDADOSABERTOSDOCNPJ.pdf'
+# print('Baixando layout:')
+# wget.download(Layout, out=output_files, bar=bar_progress)
 
 ####################################################################################################################################################
 
@@ -232,8 +241,8 @@ engine = create_engine('postgresql://'+user+':'+passw+'@'+host+':'+port+'/'+data
 conn = psycopg2.connect('dbname='+database+' '+'user='+user+' '+'host='+host+' '+'port='+port+' '+'password='+passw)
 cur = conn.cursor()
 
-#%%
-# Arquivos de empresa:
+# #%%
+# # Arquivos de empresa:
 empresa_insert_start = time.time()
 print("""
 #######################
@@ -252,8 +261,8 @@ for e in range(0, len(arquivos_empresa)):
     except:
         pass
 
-    empresa = pd.DataFrame(columns=[0, 1, 2, 3, 4, 5, 6])
-    empresa_dtypes = {0: 'object', 1: 'object', 2: 'object', 3: 'object', 4: 'object', 5: 'object', 6: 'object'}
+    #empresa = pd.DataFrame(columns=[0, 1, 2, 3, 4, 5, 6])
+    empresa_dtypes = {0: object, 1: object, 2: 'Int32', 3: 'Int32', 4: object, 5: 'Int32', 6: object}
     extracted_file_path = os.path.join(extracted_files, arquivos_empresa[e])
 
     empresa = pd.read_csv(filepath_or_buffer=extracted_file_path,
@@ -294,7 +303,7 @@ print('Tempo de execução do processo de empresa (em segundos): ' + str(empresa
 # Arquivos de estabelecimento:
 estabelecimento_insert_start = time.time()
 print("""
-############################### 
+###############################
 ## Arquivos de ESTABELECIMENTO:
 ###############################
 """)
@@ -303,65 +312,80 @@ print("""
 cur.execute('DROP TABLE IF EXISTS "estabelecimento";')
 conn.commit()
 
+print('Tem %i arquivos de estabelecimento!' % len(arquivos_estabelecimento))
 for e in range(0, len(arquivos_estabelecimento)):
     print('Trabalhando no arquivo: '+arquivos_estabelecimento[e]+' [...]')
     try:
         del estabelecimento
+        gc.collect()
     except:
         pass
 
-    estabelecimento = pd.DataFrame(columns=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28])
+    # estabelecimento = pd.DataFrame(columns=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28])
+    estabelecimento_dtypes = {0: object, 1: object, 2: object, 3: 'Int32', 4: object, 5: 'Int32', 6: 'Int32',
+                              7: 'Int32', 8: object, 9: object, 10: 'Int32', 11: 'Int32', 12: object, 13: object,
+                              14: object, 15: object, 16: object, 17: object, 18: object, 19: object,
+                              20: 'Int32', 21: object, 22: object, 23: object, 24: object, 25: object,
+                              26: object, 27: object, 28: object, 29: 'Int32'}
     extracted_file_path = os.path.join(extracted_files, arquivos_estabelecimento[e])
 
-    estabelecimento = pd.read_csv(filepath_or_buffer=extracted_file_path,
-                          sep=';',
-                          #nrows=100,
-                          skiprows=0,
-                          header=None,
-                          dtype='object',
-                          encoding='latin-1',
-    )
+    NROWS = 2000000
+    part = 0
+    while True:
+        estabelecimento = pd.read_csv(filepath_or_buffer=extracted_file_path,
+                              sep=';',
+                              nrows=NROWS,
+                              skiprows=NROWS * part,
+                              header=None,
+                              dtype=estabelecimento_dtypes,
+                              encoding='latin-1',
+        )
 
-    # Tratamento do arquivo antes de inserir na base:
-    estabelecimento = estabelecimento.reset_index()
-    del estabelecimento['index']
+        # Tratamento do arquivo antes de inserir na base:
+        estabelecimento = estabelecimento.reset_index()
+        del estabelecimento['index']
+        gc.collect()
 
-    # Renomear colunas
-    estabelecimento.columns = ['cnpj_basico',
-                               'cnpj_ordem',
-                               'cnpj_dv',
-                               'identificador_matriz_filial',
-                               'nome_fantasia',
-                               'situacao_cadastral',
-                               'data_situacao_cadastral',
-                               'motivo_situacao_cadastral',
-                               'nome_cidade_exterior',
-                               'pais',
-                               'data_inicio_atividade',
-                               'cnae_fiscal_principal',
-                               'cnae_fiscal_secundaria',
-                               'tipo_logradouro',
-                               'logradouro',
-                               'numero',
-                               'complemento',
-                               'bairro',
-                               'cep',
-                               'uf',
-                               'municipio',
-                               'ddd_1',
-                               'telefone_1',
-                               'ddd_2',
-                               'telefone_2',
-                               'ddd_fax',
-                               'fax',
-                               'correio_eletronico',
-                               'situacao_especial',
-                               'data_situacao_especial']
+        # Renomear colunas
+        estabelecimento.columns = ['cnpj_basico',
+                                   'cnpj_ordem',
+                                   'cnpj_dv',
+                                   'identificador_matriz_filial',
+                                   'nome_fantasia',
+                                   'situacao_cadastral',
+                                   'data_situacao_cadastral',
+                                   'motivo_situacao_cadastral',
+                                   'nome_cidade_exterior',
+                                   'pais',
+                                   'data_inicio_atividade',
+                                   'cnae_fiscal_principal',
+                                   'cnae_fiscal_secundaria',
+                                   'tipo_logradouro',
+                                   'logradouro',
+                                   'numero',
+                                   'complemento',
+                                   'bairro',
+                                   'cep',
+                                   'uf',
+                                   'municipio',
+                                   'ddd_1',
+                                   'telefone_1',
+                                   'ddd_2',
+                                   'telefone_2',
+                                   'ddd_fax',
+                                   'fax',
+                                   'correio_eletronico',
+                                   'situacao_especial',
+                                   'data_situacao_especial']
 
-    # Gravar dados no banco:
-    # estabelecimento
-    to_sql(estabelecimento, name='estabelecimento', con=engine, if_exists='append', index=False)
-    print('Arquivo ' + arquivos_estabelecimento[e] + ' inserido com sucesso no banco de dados!')
+        # Gravar dados no banco:
+        # estabelecimento
+        to_sql(estabelecimento, name='estabelecimento', con=engine, if_exists='append', index=False)
+        print('Arquivo ' + arquivos_estabelecimento[e] + ' / ' + str(part) + ' inserido com sucesso no banco de dados!')
+        if len(estabelecimento) == NROWS:
+            part += 1
+        else:
+            break
 
 try:
     del estabelecimento
@@ -392,14 +416,15 @@ for e in range(0, len(arquivos_socios)):
     except:
         pass
 
+    socios_dtypes = {0: object, 1: 'Int32', 2: object, 3: object, 4: 'Int32', 5: 'Int32', 6: 'Int32',
+                     7: object, 8: object, 9: 'Int32', 10: 'Int32'}
     extracted_file_path = os.path.join(extracted_files, arquivos_socios[e])
-    socios = pd.DataFrame(columns=[1,2,3,4,5,6,7,8,9,10,11])
     socios = pd.read_csv(filepath_or_buffer=extracted_file_path,
                           sep=';',
                           #nrows=100,
                           skiprows=0,
                           header=None,
-                          dtype='object',
+                          dtype=socios_dtypes,
                           encoding='latin-1',
     )
 
@@ -456,6 +481,7 @@ for e in range(0, len(arquivos_simples)):
 
     # Verificar tamanho do arquivo:
     print('Lendo o arquivo ' + arquivos_simples[e]+' [...]')
+    simples_dtypes = ({0: object, 1: object, 2: 'Int32', 3: 'Int32', 4: object, 5: 'Int32', 6: 'Int32'})
     extracted_file_path = os.path.join(extracted_files, arquivos_simples[e])
 
     simples_lenght = sum(1 for line in open(extracted_file_path, "r"))
@@ -477,7 +503,7 @@ for e in range(0, len(arquivos_simples)):
                               nrows=nrows,
                               skiprows=skiprows,
                               header=None,
-                              dtype='object',
+                              dtype=simples_dtypes,
                               encoding='latin-1',
         )
 
@@ -538,7 +564,7 @@ for e in range(0, len(arquivos_cnae)):
 
     extracted_file_path = os.path.join(extracted_files, arquivos_cnae[e])
     cnae = pd.DataFrame(columns=[1,2])
-    cnae = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    cnae = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='latin-1')
 
     # Tratamento do arquivo antes de inserir na base:
     cnae = cnae.reset_index()
@@ -581,9 +607,9 @@ for e in range(0, len(arquivos_moti)):
     except:
         pass
 
+    moti_dtypes = ({0: 'Int32', 1: object})
     extracted_file_path = os.path.join(extracted_files, arquivos_moti[e])
-    moti = pd.DataFrame(columns=[1,2])
-    moti = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    moti = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype=moti_dtypes, encoding='latin-1')
 
     # Tratamento do arquivo antes de inserir na base:
     moti = moti.reset_index()
@@ -626,9 +652,9 @@ for e in range(0, len(arquivos_munic)):
     except:
         pass
 
+    munic_dtypes = ({0: 'Int32', 1: object})
     extracted_file_path = os.path.join(extracted_files, arquivos_munic[e])
-    munic = pd.DataFrame(columns=[1,2])
-    munic = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    munic = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype=munic_dtypes, encoding='latin-1')
 
     # Tratamento do arquivo antes de inserir na base:
     munic = munic.reset_index()
@@ -671,9 +697,9 @@ for e in range(0, len(arquivos_natju)):
     except:
         pass
 
+    natju_dtypes = ({0: 'Int32', 1: object})
     extracted_file_path = os.path.join(extracted_files, arquivos_natju[e])
-    natju = pd.DataFrame(columns=[1,2])
-    natju = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    natju = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype=natju_dtypes, encoding='latin-1')
 
     # Tratamento do arquivo antes de inserir na base:
     natju = natju.reset_index()
@@ -716,9 +742,9 @@ for e in range(0, len(arquivos_pais)):
     except:
         pass
 
+    pais_dtypes = ({0: 'Int32', 1: object})
     extracted_file_path = os.path.join(extracted_files, arquivos_pais[e])
-    pais = pd.DataFrame(columns=[1,2])
-    pais = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    pais = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype=pais_dtypes, encoding='latin-1')
 
     # Tratamento do arquivo antes de inserir na base:
     pais = pais.reset_index()
@@ -761,9 +787,9 @@ for e in range(0, len(arquivos_quals)):
     except:
         pass
 
+    quals_dtypes = ({0: 'Int32', 1: object})
     extracted_file_path = os.path.join(extracted_files, arquivos_quals[e])
-    quals = pd.DataFrame(columns=[1,2])
-    quals = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype='object', encoding='ANSI')
+    quals = pd.read_csv(filepath_or_buffer=extracted_file_path, sep=';', skiprows=0, header=None, dtype=quals_dtypes, encoding='latin-1')
 
     # Tratamento do arquivo antes de inserir na base:
     quals = quals.reset_index()
@@ -815,13 +841,13 @@ print("""
 #######################################
 """)
 cur.execute("""
-create index empresa_cnpj on empresa(cnpj_basico);
+create index if not exists empresa_cnpj on empresa(cnpj_basico);
 commit;
-create index estabelecimento_cnpj on estabelecimento(cnpj_basico);
+create index if not exists estabelecimento_cnpj on estabelecimento(cnpj_basico);
 commit;
-create index socios_cnpj on socios(cnpj_basico);
+create index if not exists socios_cnpj on socios(cnpj_basico);
 commit;
-create index simples_cnpj on simples(cnpj_basico);
+create index if not exists simples_cnpj on simples(cnpj_basico);
 commit;
 """)
 conn.commit()
