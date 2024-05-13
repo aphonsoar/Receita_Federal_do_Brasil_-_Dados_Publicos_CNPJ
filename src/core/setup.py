@@ -1,7 +1,5 @@
-from os import makedirs, getenv, environ, path, getcwd
-from dotenv import load_dotenv
-
-from os import getenv, path
+from os import getenv, path, getcwd
+from dotenv import load_dotenv  
 from typing import Union
 from sqlalchemy import create_engine
 from psycopg2 import connect, OperationalError
@@ -33,17 +31,19 @@ def setup_database() -> Union[Database, None]:
     
     >>> setup_database()
     """
-    
+    load_dotenv()
+
     try:
         # Get environment variables
-        user = getenv('POSTGRES_USER')
-        passw = getenv('POSTGRES_PASSWORD')
+        user = getenv('POSTGRES_USER', 'postgres')
+        passw = getenv('POSTGRES_PASSWORD', 'postgres')
         host = getenv('POSTGRES_HOST', 'localhost')
         port = getenv('POSTGRES_PORT', '5432')
         database_name = getenv('POSTGRES_NAME')
         
         # Connect to the database
         db_uri = f'postgresql://{user}:{passw}@{host}:{port}/{database_name}'
+        
         engine = create_engine(db_uri)
         
         db_info = f'dbname={database_name} user={user} host={host} port={port} password={passw}'
@@ -60,7 +60,6 @@ def setup_database() -> Union[Database, None]:
 def setup_etl():
     # Load to environment variables
     env_path = path.join(getcwd(), '.env')
-    load_dotenv(env_path)
 
     # Folders to 
     output_files_path, extracted_files_path = get_sink_folder()
