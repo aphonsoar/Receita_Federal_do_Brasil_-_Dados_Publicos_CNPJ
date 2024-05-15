@@ -1,7 +1,6 @@
 from timy import timer
 from os import getenv, path
 from typing import Tuple, Union
-from sqlalchemy import create_engine
 from psycopg2 import connect, sql, OperationalError, errors
 import pandas as pd
 
@@ -80,13 +79,12 @@ def populate_table_with_filenames(
     header=f'{FENCE}\n{title}\n{FENCE}'
     print(header)
 
-    # Drop table antes do insert
-    with database.conn.cursor() as cur:
+    # Drop table (if exists)
+    with database.engine.connect() as conn:
         identifier = sql.Identifier(table_info.table_name)
         query = sql.SQL('DROP TABLE IF EXISTS {};').format(identifier)
-        cur.execute(query)
-        database.conn.commit()
-
+        conn.execute(query)
+    
     # Inserir dados
     for filename in filenames:
         print('Trabalhando no arquivo: ' + filename + ' [...]')
@@ -113,9 +111,7 @@ def populate_database(database, from_folder, files):
         populate_table_with_filenames(database, table_info, from_folder, files[table_name])
 
 @timer('Criar indices do banco')
-def generate_database_indices(conn):
-    cur = conn.cursor()
-
+def generate_database_indices(engine):
     print("""
     #############################################
     ## Processo de carga dos arquivos finalizado!
@@ -129,18 +125,18 @@ def generate_database_indices(conn):
     #######################################
     """)
 
-    cur.execute("""
-    create index empresa_cnpj on empresa(cnpj_basico);
-    commit;
-    create index estabelecimento_cnpj on estabelecimento(cnpj_basico);
-    commit;
-    create index socios_cnpj on socios(cnpj_basico);
-    commit;
-    create index simples_cnpj on simples(cnpj_basico);
-    commit;
-    """)
+    fields_tables=[
+        ('empresa_cnpj', 'empresa',),
+        ('estabelecimento_cnpj', 'estabelecimento',),
+        ('socios_cnpj', 'socios',),
+        ('simples_cnpj', 'simples',)
+    ]
+    mask="create index {field} on empresa({cnpj_basico}); commit;"
+    query_str="\n".join([mask.format() for field, table in fields_tables])
     
-    conn.commit()
+    engine.execute(query_str)
+    
+    engine.commit()
     print("""
     ############################################################
     ## Índices criados nas tabelas, para a coluna `cnpj_basico`:

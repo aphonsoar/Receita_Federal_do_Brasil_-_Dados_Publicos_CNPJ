@@ -193,5 +193,5 @@ def load_database(database, from_folder):
     populate_database(database, from_folder, filenames)
 
     # Cria índices na tabela em coluna 'cnpj_basico'
-    generate_database_indices(database.conn)
+    generate_database_indices(database.engine)
 

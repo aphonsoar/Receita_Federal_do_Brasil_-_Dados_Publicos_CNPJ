@@ -46,12 +46,8 @@ def setup_database() -> Union[Database, None]:
         
         engine = create_engine(db_uri)
         
-        db_info = f'dbname={database_name} user={user} host={host} port={port} password={passw}'
-        
-        conn = connect(db_info)
-
         print('Connection to the database established!')
-        return Database(engine, conn)
+        return Database(engine)
     
     except OperationalError as e:
         print(f"Error connecting to database: {e}")
