@@ -1,8 +1,8 @@
 version: '3.9'
 
 services:
-  db:
-    image: postgres:latest
+  postgres:
+    image: postgres:14
     restart: always
     env_file: .env
     expose:
