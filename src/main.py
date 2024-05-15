@@ -6,7 +6,10 @@ print(
     - Projeto           : Receita Federal do Brasil - Dados Públicos CNPJ
     - Objetivo          : Baixar, transformar e carregar dados da Receita Federal do Brasil
     - Fonte de dados    : http://200.152.38.155/CNPJ/
-    - Desenvolvido por  : (Aphonso Henrique do Amaral Rafael, @aphonsoar), (Bruno Henrique Lobo Netto Peixoto, @brunolnetto)
+    - Desenvolvido por  : [
+        (Aphonso Henrique do Amaral Rafael, @aphonsoar), 
+        (Bruno Henrique Lobo Netto Peixoto, @brunolnetto)
+      ]
     - Contribua         : https://github.com/brunolnetto/Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ
   """
 )
@@ -41,7 +44,7 @@ database, output_files_path, extracted_files_path = setup_etl()
 # # Buscar dados
 # get_RF_data(output_files_path, extracted_files_path)
 
-# Carregar banco
+# # Carregar banco
 load_database(database, extracted_files_path)
 
 print("""Fim do processo! Você pode utilizar o banco de dados!""")
