@@ -3,10 +3,12 @@ from os import getenv, path
 from typing import Tuple, Union
 from psycopg2 import connect, sql, OperationalError, errors
 import pandas as pd
+from sqlalchemy import text
 
 from utils.misc import delete_var, to_sql
 from core.constants import FENCE, TABLES_INFO_DICT
 from core.models import Database, TableInfo
+import sqlalchemy as sa
 
 ##########################################################################
 ## LOAD AND TRANSFORM
@@ -81,8 +83,9 @@ def populate_table_with_filenames(
 
     # Drop table (if exists)
     with database.engine.connect() as conn:
-        identifier = sql.Identifier(table_info.table_name)
-        query = sql.SQL('DROP TABLE IF EXISTS {};').format(identifier)
+        query = text(f"DROP TABLE IF EXISTS {table_info.table_name};")
+
+        # Execute the compiled SQL string
         conn.execute(query)
     
     # Inserir dados
