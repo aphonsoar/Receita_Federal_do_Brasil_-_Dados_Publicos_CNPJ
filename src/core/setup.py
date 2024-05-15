@@ -31,8 +31,9 @@ def setup_database() -> Union[Database, None]:
     
     >>> setup_database()
     """
-    load_dotenv()
-
+    env_path = path.join(getcwd(), '.env')
+    load_dotenv(env_path)
+    
     try:
         # Get environment variables
         user = getenv('POSTGRES_USER', 'postgres')
@@ -53,14 +54,3 @@ def setup_database() -> Union[Database, None]:
         print(f"Error connecting to database: {e}")
         return None
 
-def setup_etl():
-    # Load to environment variables
-    env_path = path.join(getcwd(), '.env')
-
-    # Folders to 
-    output_files_path, extracted_files_path = get_sink_folder()
-
-    # Database with setup connection
-    database = setup_database()
-
-    return database, output_files_path, extracted_files_path
