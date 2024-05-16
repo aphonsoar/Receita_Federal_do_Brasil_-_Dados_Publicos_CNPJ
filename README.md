@@ -40,8 +40,8 @@ c. Copie-cole o conteúdo do arquivo `banco_de_dados.sql`
  
 2. Crie um arquivo `.env` no diretório `code`, conforme as variáveis de ambiente do seu ambiente de trabalho (localhost). Utilize como referência o arquivo `.env_template`. Você pode também, por exemplo, renomear o arquivo de `.env_template` para apenas `.env` e então utilizá-lo:
 
-   - `OUTPUT_FILES_PATH`    : diretório de destino para o donwload dos arquivos
-   - `EXTRACTED_FILES_PATH` : diretório de destino para a extração dos arquivos .zip
+   - `OUTPUT_FILES_PATH`    : (Opcional) diretório de destino para o donwload dos arquivos
+   - `EXTRACTED_FILES_PATH` : (Opcional) diretório de destino para a extração dos arquivos .zip
    - `DB_USER`              : usuário do banco de dados criado pelo arquivo `banco_de_dados.sql`
    - `DB_PASSWORD`          : senha do usuário do BD
    - `DB_HOST`              : host da conexão com o BD 
