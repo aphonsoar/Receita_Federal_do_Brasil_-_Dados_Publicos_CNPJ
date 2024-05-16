@@ -130,7 +130,6 @@ def generate_database_indices(engine):
     #######################################
     """)
 
-<<<<<<< HEAD
     fields_tables=[
         ('empresa_cnpj', 'empresa',),
         ('estabelecimento_cnpj', 'estabelecimento',),
