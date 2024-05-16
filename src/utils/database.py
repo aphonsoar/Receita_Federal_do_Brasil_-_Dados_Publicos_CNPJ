@@ -25,7 +25,9 @@ def insert_data_on_database(
     
     artefato = pd.read_csv(
         filepath_or_buffer=extracted_file_path,
-        sep=';', skiprows=0, header=None, dtype=dtypes, encoding=encoding,
+        sep=';', skiprows=0, header=None, 
+	dtype=dtypes, encoding=encoding,
+	low_memory=False
     )
 
     # Tratamento do arquivo antes de inserir na base:
@@ -128,13 +130,14 @@ def generate_database_indices(engine):
     #######################################
     """)
 
+<<<<<<< HEAD
     fields_tables=[
         ('empresa_cnpj', 'empresa',),
         ('estabelecimento_cnpj', 'estabelecimento',),
         ('socios_cnpj', 'socios',),
         ('simples_cnpj', 'simples',)
     ]
-    mask="create index {field} on empresa({cnpj_basico}); commit;"
+    mask="create index {field} on {table}(cnpj_basico); commit;"
     query_str="\n".join([mask.format() for field, table in fields_tables])
     
     engine.execute(query_str)
