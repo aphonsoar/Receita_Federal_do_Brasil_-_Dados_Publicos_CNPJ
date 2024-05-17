@@ -24,6 +24,7 @@ def empresa_transform_map(artifact):
     return artifact
 
 TABLES_INFO_DICT = {
+    """
     'empresa': {
         'label': 'Empresa',
         'columns': [ 
@@ -38,7 +39,7 @@ TABLES_INFO_DICT = {
         'expression': 'EMPRE',
         'transform_map': empresa_transform_map,
         'encoding': 'latin-1'
-    },
+    },"""
     'estabelecimento': {
         'label': 'Estabelecimento',
         'columns': [
@@ -73,7 +74,8 @@ TABLES_INFO_DICT = {
             'situacao_especial', 
             'data_situacao_especial'
         ],
-        'expression': 'ESTABELE'
+        'expression': 'ESTABELE',
+	'encoding': 'latin-1'
     },
     'socios': {
         'label': 'Socios',
@@ -111,36 +113,36 @@ TABLES_INFO_DICT = {
         'label': 'CNAE',
         'columns': ['codigo', 'descricao'],
         'expression': 'CNAE',
-        'encoding': 'ANSI'
+        'encoding': 'latin-1'
     },
     'moti': {
         'label': 'Motivos da situação atual',
         'columns': ['codigo', 'descricao'],
         'expression': 'MOTI',
-        'encoding': 'ANSI'
+        'encoding': 'latin-1'
     },
     'munic': {
         'label': 'Municípios',
         'columns': ['codigo', 'descricao'],
         'expression': 'MUNIC',
-        'encoding': 'ANSI'
+        'encoding': 'latin-1'
     },
     'natju': {
         'label': 'Natureza jurídica',
         'columns': ['codigo', 'descricao'],
         'expression': 'NATJU',
-        'encoding': 'ANSI'
+        'encoding': 'latin-1'
     },
     'pais': {
         'label': 'País',
         'columns': ['codigo', 'descricao'],
         'expression': 'PAIS',
-        'encoding': 'ANSI'
+        'encoding': 'latin-1'
     },
     'quals': {
         'label': 'País',
         'columns': ['codigo', 'descricao'],
         'expression': 'QUALS',
-        'encoding': 'ANSI'
+        'encoding': 'latin-1'
     }
 }
