@@ -11,7 +11,6 @@ print(
         (Bruno Henrique Lobo Netto Peixoto, @brunolnetto)
       ]
     - Contribua         : https://github.com/brunolnetto/Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ
-    - 
   """
 )
 

@@ -26,8 +26,8 @@ def insert_data_on_database(
     artefato = pd.read_csv(
         filepath_or_buffer=extracted_file_path,
         sep=';', skiprows=0, header=None, 
-	dtype=dtypes, encoding=encoding,
-	low_memory=False
+        dtype=dtypes, encoding=encoding, 
+        low_memory=False
     )
 
     # Tratamento do arquivo antes de inserir na base:
@@ -55,7 +55,9 @@ def populate_table_with_filename(
 
     artefato = pd.read_csv(
         filepath_or_buffer=extracted_file_path,
-        sep=';', skiprows=0, header=None, dtype=dtypes, encoding=table_info.encoding,
+        sep=';', skiprows=0, header=None, 
+        dtype=dtypes, encoding=table_info.encoding,
+        low_memory=False
     )
 
     # Tratamento do arquivo antes de inserir na base:
@@ -82,7 +84,7 @@ def populate_table_with_filenames(
     title=f'## Arquivos de {table_info.label.upper()}:'
     header=f'{FENCE}\n{title}\n{FENCE}'
     print(header)
-
+    
     # Drop table (if exists)
     with database.engine.connect() as conn:
         query = text(f"DROP TABLE IF EXISTS {table_info.table_name};")
@@ -103,9 +105,8 @@ def populate_table_with_filenames(
 
 @timer(ident='Popular banco')
 def populate_database(database, from_folder, files):
-    table_names = list(TABLES_INFO_DICT.keys())
-
-    for table_name in table_names:
+    for table_name in TABLES_INFO_DICT:
+        
         label = TABLES_INFO_DICT[table_name]['label']
         columns = TABLES_INFO_DICT[table_name]['columns']
         expression = TABLES_INFO_DICT[table_name]['expression']
@@ -137,11 +138,15 @@ def generate_database_indices(engine):
         ('simples_cnpj', 'simples',)
     ]
     mask="create index {field} on {table}(cnpj_basico); commit;"
-    query_str="\n".join([mask.format() for field, table in fields_tables])
     
-    engine.execute(query_str)
+    with engine.connect() as conn:
+        queries=[ mask.format(field=field_, table=table_) for field_, table_ in fields_tables ]
+        query_str="\n".join(queries)
+        query = text(query_str)
+
+        # Execute the compiled SQL string
+        conn.execute(query)
     
-    engine.commit()
     print("""
     ############################################################
     ## Índices criados nas tabelas, para a coluna `cnpj_basico`:

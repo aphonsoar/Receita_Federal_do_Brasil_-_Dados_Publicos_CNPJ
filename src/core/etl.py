@@ -31,9 +31,8 @@ def get_RF_filenames(extracted_files_path):
 
     for item in items:
         has_label_map = lambda label: item.lower().find(label[1].lower()) > -1
-        print(list(filter(has_label_map, tablename_tuples)))
         this_tablename_tuple = list(filter(has_label_map, tablename_tuples))
-	
+
         if(len(this_tablename_tuple)!=0):
             this_tablename = this_tablename_tuple[0][0]
             files[this_tablename].append(item)
