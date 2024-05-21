@@ -13,35 +13,6 @@ import sqlalchemy as sa
 ##########################################################################
 ## LOAD AND TRANSFORM
 ##########################################################################
-def insert_data_on_database(
-    database, file, table_name, columns, to_folder, 
-    encoding, cleanse_transform_map
-):
-    
-    print('Trabalhando no arquivo: ' + file + ' [...]')
-    artefato = pd.DataFrame(columns=list(range(0, len(columns))))
-    dtypes = {column: 'object' for column in columns}
-    extracted_file_path = path.join(to_folder, file)
-    
-    artefato = pd.read_csv(
-        filepath_or_buffer=extracted_file_path,
-        sep=';', skiprows=0, header=None, 
-        dtype=dtypes, encoding=encoding, 
-        low_memory=False
-    )
-
-    # Tratamento do arquivo antes de inserir na base:
-    artefato = artefato.reset_index()
-    del artefato['index']
-
-    # Renomear colunas
-    artefato.columns = columns
-    artefato = cleanse_transform_map(artefato)
-
-    # Gravar dados no banco:
-    artefato.to_sql(name=table_name, con=database.engine, if_exists='append', index=False)
-    print('Arquivos ' + file + ' inserido com sucesso no banco de dados!')
-
 def populate_table_with_filename(
     database: Database, 
     table_info: TableInfo,
@@ -67,9 +38,17 @@ def populate_table_with_filename(
     # Renomear colunas
     artefato.columns = table_info.columns
     artefato = table_info.transform_map(artefato)
-
+    
     # Gravar dados no banco:
-    to_sql(artefato, name=table_info.table_name, con=database.engine, if_exists='append', index=False)
+    to_sql(
+        artefato, 
+        filename=extracted_file_path,
+        tablename=table_info.table_name, 
+        con=database.engine, 
+        if_exists='append', 
+        index=False
+    )
+    
     print('Arquivos ' + filename + ' inserido com sucesso no banco de dados!')
 
     delete_var(artefato)
@@ -115,15 +94,15 @@ def populate_database(database, from_folder, files):
 
         table_info = TableInfo(label, table_name, columns, encoding, transform_map)
         populate_table_with_filenames(database, table_info, from_folder, files[table_name])
+        
+        print("""
+        #############################################
+        ## Processo de carga dos arquivos finalizado!
+        #############################################
+        """)
 
 @timer('Criar indices do banco')
 def generate_database_indices(engine):
-    print("""
-    #############################################
-    ## Processo de carga dos arquivos finalizado!
-    #############################################
-    """)
-
     # Criar índices na base de dados:
     print("""
     #######################################
@@ -145,7 +124,10 @@ def generate_database_indices(engine):
         query = text(query_str)
 
         # Execute the compiled SQL string
-        conn.execute(query)
+        try:
+            conn.execute(query)
+        except Exception:
+            pass
     
     print("""
     ############################################################

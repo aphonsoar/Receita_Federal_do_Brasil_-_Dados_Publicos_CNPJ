@@ -7,7 +7,7 @@ DADOS_RF_URL = 'http://200.152.38.155/CNPJ/'
 
 # Registros por carga
 TAMANHO_DAS_PARTES = 1000000
-CHUNK_SIZE = 4096
+CHUNK_SIZE = 1000
 
 # Miscelaneous
 FENCE_LENGTH = 35
@@ -59,13 +59,13 @@ TABLES_INFO_DICT = {
             'data_situacao_especial'
         ],
         'expression': 'ESTABELE',
-        'encoding': 'latin-1'
+	    'encoding': 'latin-1'
     }
 }
 
+
 """
-{
-    'empresa': {
+'empresa': {
         'label': 'Empresa',
         'columns': [ 
             'cnpj_basico', 
@@ -115,7 +115,7 @@ TABLES_INFO_DICT = {
             'data_situacao_especial'
         ],
         'expression': 'ESTABELE',
-        'encoding': 'latin-1'
+	'encoding': 'latin-1'
     },
     'socios': {
         'label': 'Socios',
@@ -185,6 +185,4 @@ TABLES_INFO_DICT = {
         'expression': 'QUALS',
         'encoding': 'latin-1'
     }
-}
-
 """

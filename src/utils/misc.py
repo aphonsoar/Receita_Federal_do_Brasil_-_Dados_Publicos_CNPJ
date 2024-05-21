@@ -4,6 +4,7 @@ from requests import head
 from os import path, makedirs
 import pandas as pd
 
+from utils.logging import logger
 from core.constants import CHUNK_SIZE
 
 def makedir(
@@ -73,17 +74,23 @@ def to_sql(dataframe: pd.DataFrame, **kwargs):
     Quebra em pedacos a tarefa de inserir registros no banco
     '''
     total = len(dataframe)
-    name = kwargs.get('name')
+    tablename = kwargs.get('tablename')
+    filename = kwargs.get('filename')
 
     def chunker(df):
         return (df[i:i + CHUNK_SIZE] for i in range(0, len(df), CHUNK_SIZE))
 
     for i, df in enumerate(chunker(dataframe)):
-        df.to_sql(**kwargs)
-        index = i * CHUNK_SIZE
-        percent = (index * 100) / total
-        progress = f'{name} {percent:.2f}% {index:0{len(str(total))}}/{total}'
-        stdout.write(f'\r{progress}')
+        try:
+            df.to_sql(**kwargs)
+            index = i * CHUNK_SIZE
+            percent = (index * 100) / total
+            curr_pos = f"{index:0{len(str(total))}}/{total}"
+            progress = f'{tablename} {percent:.2f}% {curr_pos}'
+            stdout.write(f'\r{progress}')
+        
+        except Exception as e:
+            message = f"Failed to insert chunk {i + 1} for table {tablename} on file {filename}"
+            logger.error(message)
     
-    print(f'\r{name} 100% {total}/{total}')
-
+    print(f'\r{tablename} 100% {total}/{total}')

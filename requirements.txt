@@ -20,3 +20,4 @@ wget>=3.2
 zipp>=3.4.1
 timy==0.4.2
 tqdm==4.66.2
+loguru==0.7.2
