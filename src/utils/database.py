@@ -2,11 +2,12 @@ from timy import timer
 from os import getenv, path
 from typing import Tuple, Union
 from psycopg2 import connect, sql, OperationalError, errors
-import polars as pl
+import pandas as pd
 from sqlalchemy import text
 
-from utils.misc import delete_var, to_sql
-from core.constants import FENCE, TABLES_INFO_DICT, CHUNK_SIZE, SCHEMA_LENGTH
+from utils.dataframe import to_sql, dataframe_chunker_gen
+from utils.misc import delete_var, update_progress, get_line_count
+from core.constants import FENCE, TABLES_INFO_DICT, CHUNK_SIZE, SCHEMA_LENGTH, ROW_ESTIMATE_COUNT
 from core.models import Database, TableInfo
 
 ##########################################################################
@@ -24,53 +25,49 @@ def populate_table_with_filename(
         for col in range(0, len_cols)
     }
     
-    artefato = pl.DataFrame(data=data)
+    df = pd.DataFrame(data)
     dtypes = { column: str for column in table_info.columns }
     extracted_file_path = path.join(to_folder, filename)
-
-    reader = pl.read_csv_batched(
-        source=extracted_file_path,
-        batch_size=CHUNK_SIZE,
-        separator=';', 
-        skip_rows=0, 
-        has_header=False, 
-        infer_schema_length=SCHEMA_LENGTH,
-        encoding=table_info.encoding,
-        low_memory=False
-    )
     
-    for artefato in reader:
+    csv_read_props = {
+        "filepath_or_buffer": extracted_file_path,
+        "sep": ';', 
+        "skiprows": 0,
+        "chunksize": CHUNK_SIZE, 
+        "header": None, 
+        "dtype": dtypes,
+        "encoding": table_info.encoding,
+        "low_memory": False,
+        "memory_map": True
+    }
+    
+    row_count_estimation = get_line_count(extracted_file_path)
+    
+    for index, df_chunk in enumerate(pd.read_csv(**csv_read_props)):
         # Tratamento do arquivo antes de inserir na base:
-        artefato = artefato.reset_index()
-        del artefato['index']
-
-        # Renomear colunas
-        artefato.columns = table_info.columns
-        artefato = table_info.transform_map(artefato)
+        df_chunk = df_chunk.reset_index()
+        del df_chunk['index']
         
-        print(
-            {
-                "filename":extracted_file_path,
-                "tablename": table_info.table_name, 
-                "con": database.engine, 
-                "if_exists": 'append', 
-                "index": False
-            }
-        )
+        # Renomear colunas
+        df_chunk.columns = table_info.columns
+        df_chunk = table_info.transform_map(df_chunk)
 
-        # # Gravar dados no banco:
-        # to_sql(
-        #     artefato, 
-        #     filename=extracted_file_path,
-        #     tablename=table_info.table_name, 
-        #     con=database.engine, 
-        #     if_exists='append', 
-        #     index=False
-        # )
+        update_progress(index * CHUNK_SIZE, row_count_estimation, filename)
+        
+        # Gravar dados no banco:
+        to_sql(
+            df_chunk, 
+            filename=extracted_file_path,
+            tablename=table_info.table_name, 
+            conn=database.engine, 
+            if_exists='append', 
+            index=False,
+            verbose=False
+        )
     
     print('Arquivos ' + filename + ' inserido com sucesso no banco de dados!')
 
-    delete_var(artefato)
+    delete_var(df)
 
 @timer('Popular tabela')
 def populate_table_with_filenames(

@@ -2,13 +2,16 @@ def repeat_token(token: str, n: int):
     return ''.join([token] * n)
 
 # Sourc
-LAYOUT_URL = 'https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/arquivos/NOVOLAYOUTDOSDADOSABERTOSDOCNPJ.pdf'
+filename='NOVOLAYOUTDOSDADOSABERTOSDOCNPJ.pdf'
+file_route = '/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/arquivos/'
+layout_host = 'https://www.gov.br'
+LAYOUT_URL = f'{layout_host}{file_route}{filename}'
 DADOS_RF_URL = 'http://200.152.38.155/CNPJ/'
 
 # Registros por carga
-TAMANHO_DAS_PARTES = 1000000
-SCHEMA_LENGTH = 10000
+ROW_ESTIMATE_COUNT = 1000
 CHUNK_SIZE = 10000
+SCHEMA_LENGTH = 10000
 
 # Miscelaneous
 FENCE_LENGTH = 35
@@ -25,48 +28,7 @@ def empresa_transform_map(artifact):
     return artifact
 
 TABLES_INFO_DICT = {
-    'estabelecimento': {
-        'label': 'Estabelecimento',
-        'columns': [
-            'cnpj_basico', 
-            'cnpj_ordem', 
-            'cnpj_dv', 
-            'identificador_matriz_filial', 
-            'nome_fantasia', 
-            'situacao_cadastral',
-            'data_situacao_cadastral', 
-            'motivo_situacao_cadastral', 
-            'nome_cidade_exterior', 
-            'pais', 
-            'data_inicio_atividade',
-            'cnae_fiscal_principal', 
-            'cnae_fiscal_secundaria', 
-            'tipo_logradouro', 
-            'logradouro', 
-            'numero',
-            'complemento', 
-            'bairro', 
-            'cep', 
-            'uf', 
-            'municipio', 
-            'ddd_1', 
-            'telefone_1', 
-            'ddd_2',
-            'telefone_2', 
-            'ddd_fax', 
-            'fax', 
-            'correio_eletronico', 
-            'situacao_especial', 
-            'data_situacao_especial'
-        ],
-        'expression': 'ESTABELE',
-	    'encoding': 'latin-1'
-    }
-}
-
-
-"""
-'empresa': {
+    'empresa': {
         'label': 'Empresa',
         'columns': [ 
             'cnpj_basico', 
@@ -186,4 +148,6 @@ TABLES_INFO_DICT = {
         'expression': 'QUALS',
         'encoding': 'latin-1'
     }
-"""
+}
+
+

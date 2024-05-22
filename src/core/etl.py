@@ -18,7 +18,7 @@ from core.constants import TABLES_INFO_DICT, DADOS_RF_URL, LAYOUT_URL
 def get_RF_filenames(extracted_files_path):
     # Files:
     items = [ name for name in listdir(extracted_files_path) if name.endswith('') ]
-    print(items)
+    
     # Separar arquivos:
     files = {
         table_name: [] for table_name in TABLES_INFO_DICT.keys()
@@ -28,7 +28,7 @@ def get_RF_filenames(extracted_files_path):
     trimmed_tablename_list = [ table_name[:5] for table_name in TABLES_INFO_DICT.keys() ]
     
     tablename_tuples = list(zip(tablename_list, trimmed_tablename_list))
-
+    
     for item in items:
         has_label_map = lambda label: item.lower().find(label[1].lower()) > -1
         this_tablename_tuple = list(filter(has_label_map, tablename_tuples))

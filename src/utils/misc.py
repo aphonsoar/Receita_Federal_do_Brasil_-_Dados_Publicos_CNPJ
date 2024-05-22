@@ -3,6 +3,7 @@ from os import path, remove, cpu_count
 from requests import head
 from os import path, makedirs
 import pandas as pd
+import subprocess
 
 from utils.logging import logger
 from core.constants import CHUNK_SIZE
@@ -76,31 +77,26 @@ def update_progress(index, total, message):
     
     stdout.write(f'\r{progress}')
 
-def to_sql(dataframe: pd.DataFrame, **kwargs):
-    '''
-    Quebra em pedacos a tarefa de inserir registros no banco
-    '''
-    total = len(dataframe)
-    tablename = kwargs.get('tablename')
-    filename = kwargs.get('filename')
 
-    query_args = {
-        "name": tablename,
-        "if_exists": kwargs.get('append'),
-        "con": kwargs.get('con'),
-        "index": kwargs.get('index')
-    }
-    
-    def chunker(df):
-        return (df[i:i + CHUNK_SIZE] for i in range(0, len(df), CHUNK_SIZE))
+def get_line_count(filepath):
+    """
+    Uses the `wc -l` command to get the line count of a file.
 
-    for i, df in enumerate(chunker(dataframe)):
-        try:
-            df.to_sql(**query_args)
-            update_progress(i * CHUNK_SIZE, total, tablename)
+    Args:
+        filepath (str): Path to the file.
+
+    Returns:
+        int: Number of lines in the file (or None on error).
+    """
+    try:
+        # Execute the 'wc -l' command and capture the output
+        result = subprocess.run(["wc", "-l", filepath], capture_output=True)
+        result.check_returncode()  # Raise exception for non-zero return code
         
-        except Exception as e:
-            message = f"Failed to insert chunk {i + 1} for table {tablename} on file {filename}: {e}"
-            logger.error(message)
+        # Extract the line count (first element) and convert to integer
+        line_count = int(result.stdout.decode().strip().split()[0])
+        return line_count
+    except subprocess.CalledProcessError as e:
+        print(f"Error running wc command: {e}")
     
-    print(f'\r{tablename} 100% {total}/{total}')
+    return None
