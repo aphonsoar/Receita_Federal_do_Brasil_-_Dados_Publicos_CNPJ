@@ -6,7 +6,7 @@ import polars as pl
 from sqlalchemy import text
 
 from utils.misc import delete_var, to_sql
-from core.constants import FENCE, TABLES_INFO_DICT, CHUNK_SIZE
+from core.constants import FENCE, TABLES_INFO_DICT, CHUNK_SIZE, SCHEMA_LENGTH
 from core.models import Database, TableInfo
 
 ##########################################################################
@@ -34,7 +34,7 @@ def populate_table_with_filename(
         separator=';', 
         skip_rows=0, 
         has_header=False, 
-        infer_schema_length=10000,
+        infer_schema_length=SCHEMA_LENGTH,
         encoding=table_info.encoding,
         low_memory=False
     )
@@ -58,15 +58,15 @@ def populate_table_with_filename(
             }
         )
 
-        # Gravar dados no banco:
-        to_sql(
-            artefato, 
-            filename=extracted_file_path,
-            tablename=table_info.table_name, 
-            con=database.engine, 
-            if_exists='append', 
-            index=False
-        )
+        # # Gravar dados no banco:
+        # to_sql(
+        #     artefato, 
+        #     filename=extracted_file_path,
+        #     tablename=table_info.table_name, 
+        #     con=database.engine, 
+        #     if_exists='append', 
+        #     index=False
+        # )
     
     print('Arquivos ' + filename + ' inserido com sucesso no banco de dados!')
 
@@ -150,9 +150,10 @@ def generate_database_indices(engine):
     print("""
     ############################################################
     ## Índices criados nas tabelas, para a coluna `cnpj_basico`:
-    - empresa
-    - estabelecimento
-    - socios
-    - simples
+    
+        - empresa
+        - estabelecimento
+        - socios
+        - simples
     ############################################################
     """)

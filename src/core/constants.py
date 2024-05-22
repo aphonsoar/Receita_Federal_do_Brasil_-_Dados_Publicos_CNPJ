@@ -7,6 +7,7 @@ DADOS_RF_URL = 'http://200.152.38.155/CNPJ/'
 
 # Registros por carga
 TAMANHO_DAS_PARTES = 1000000
+SCHEMA_LENGTH = 10000
 CHUNK_SIZE = 10000
 
 # Miscelaneous
