@@ -6,6 +6,7 @@ from tqdm import tqdm
 from shutil import rmtree
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+from utils.logging import logger
 from utils.misc import check_diff, get_max_workers
 from core.scrapper import scrap_RF
 from utils.database import populate_database, generate_database_indices
@@ -46,7 +47,12 @@ def extract_zip_file(file_path, extracted_files_path):
     with ZipFile(file_path, 'r') as zip_ref:
         zip_ref.extractall(extracted_files_path)
 
-def download_and_extract_files(url, download_path, extracted_path, has_progress_bar):
+def download_and_extract_files(
+    url: str, 
+    download_path: str, 
+    extracted_path: str, 
+    has_progress_bar: bool
+):
     """
     Downloads a file from the given URL to the specified output path.
 
@@ -58,7 +64,7 @@ def download_and_extract_files(url, download_path, extracted_path, has_progress_
         OSError: If an error occurs during the download process.
     """
     file_name = path.basename(url)
-    print(file_name)
+    
     full_path = path.join(download_path, file_name)
 
     if not path.exists(full_path) or check_diff(url, full_path):
@@ -118,19 +124,24 @@ def get_rf_filenames_serial(
             
             # Update progress bar after download (success or failure)
             counter = counter + 1
-            print('\n')
+            logger.info('\n')
 
         except OSError as e:
-            print(e)
+            summary = f"Erro ao baixar ou extrair arquivo {base_file}"
+            message = f"{summary}: {e}"
+            logger.error(message)
             error_count += 1
             error_basefiles.append(base_file)
         
-        print(f"({index}/{total_count}) arquivos baixados. {error_count} erros: {error_basefiles}")
+        logger.info(f"({index}/{total_count}) arquivos baixados. {error_count} erros: {error_basefiles}")
 
 @timer('Baixar e extrair arquivos da Receita Federal')
 def download_and_extract_RF_data(
-    base_files, output_path, extracted_path, 
-    is_parallel = True, max_workers = get_max_workers()
+    base_files: list, 
+    output_path: str, 
+    extracted_path: str, 
+    is_parallel: bool = True,
+    max_workers: int = get_max_workers()
 ):
     """
     Downloads files from the Receita Federal base URLs to the specified output path.
@@ -150,7 +161,7 @@ def download_and_extract_RF_data(
         get_rf_filenames_serial(base_files, output_path, extracted_path)
 
     # Download layout (assuming download remains unchanged)
-    print("Baixando layout...")
+    logger.info("Baixando layout")
     download(LAYOUT_URL, out=output_path, bar=None)
 
 ####################################################################################################
@@ -179,7 +190,10 @@ def extract_RF_data(
 @timer('Buscar dados da Receita Federal')
 def get_RF_data(to_folder, from_folder, is_parallel=True):
     # Raspar dados da página 
-    base_files = scrap_RF()
+    base_files_info = scrap_RF()
+
+    # Extrair nomes dos arquivos
+    base_files = [base_file for updated_at, base_file in base_files_info]
 
     # Baixar arquivos e extrair arquivos
     download_and_extract_RF_data(base_files, to_folder, from_folder, is_parallel)

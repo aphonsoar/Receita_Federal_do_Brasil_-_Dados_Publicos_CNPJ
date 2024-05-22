@@ -7,8 +7,15 @@ from sqlalchemy import text
 
 from utils.dataframe import to_sql, dataframe_chunker_gen
 from utils.misc import delete_var, update_progress, get_line_count
-from core.constants import FENCE, TABLES_INFO_DICT, CHUNK_SIZE, SCHEMA_LENGTH, ROW_ESTIMATE_COUNT
+from core.constants import (
+    FENCE, 
+    TABLES_INFO_DICT, 
+    CHUNK_SIZE, 
+    SCHEMA_LENGTH, 
+    ROW_ESTIMATE_COUNT
+)
 from core.models import Database, TableInfo
+from utils.logging import logger
 
 ##########################################################################
 ## LOAD AND TRANSFORM
@@ -65,7 +72,7 @@ def populate_table_with_filename(
             verbose=False
         )
     
-    print('Arquivos ' + filename + ' inserido com sucesso no banco de dados!')
+    logger.info('Arquivos ' + filename + ' inserido com sucesso no banco de dados!')
 
     delete_var(df)
 
@@ -76,65 +83,62 @@ def populate_table_with_filenames(
     from_folder: str,
     filenames: list
 ):
-    title=f'## Arquivos de {table_info.label.upper()}:'
-    header=f'{FENCE}\n{title}\n{FENCE}'
-    print(header)
+    title=f'Arquivos de tabela {table_info.label.upper()}:'
+    logger.info(title)
     
     # Drop table (if exists)
     with database.engine.connect() as conn:
-        query = text(f"DROP TABLE IF EXISTS {table_info.table_name};")
+        query_str=f"DROP TABLE IF EXISTS {table_info.table_name};"
+        query = text(query_str)
 
         # Execute the compiled SQL string
         conn.execute(query)
     
     # Inserir dados
     for filename in filenames:
-        print('Trabalhando no arquivo: ' + filename + ' [...]')
+        logger.info('Trabalhando no arquivo: ' + filename + ' [...]')
         try:
             populate_table_with_filename(database, table_info, from_folder, filename)
 
         except Exception as e:
-            print(f'Falha em salvar arquivo {filename} em tabela {table_info.table_name}. Erro: {e}')
+            summary=f'Falha em salvar arquivo {filename} em tabela {table_info.table_name}'
+            logger.info(f'{summary}: {e}')
+    
+    logger.info(f'Arquivos de {table_info.label} finalizados!')
 
-    print(f'Arquivos de {table_info.label} finalizados!')
+
+def populate_table(database: Database, table_name: str, from_folder: str, table_files: list):
+    table_info = TABLES_INFO_DICT[table_name]
+    
+    label = table_info['label']
+    columns = table_info['columns']
+    encoding = table_info['encoding']
+    transform_map = table_info.get('transform_map', lambda x: x)
+
+    table_info = TableInfo(label, table_name, columns, encoding, transform_map)
+    populate_table_with_filenames(database, table_info, from_folder, table_files)
 
 @timer(ident='Popular banco')
 def populate_database(database, from_folder, files):
     for table_name in TABLES_INFO_DICT:
-        
-        label = TABLES_INFO_DICT[table_name]['label']
-        columns = TABLES_INFO_DICT[table_name]['columns']
-        encoding = TABLES_INFO_DICT[table_name]['encoding']
-        transform_map = TABLES_INFO_DICT[table_name].get('transform_map', lambda x: x)
-
-        table_info = TableInfo(label, table_name, columns, encoding, transform_map)
-        populate_table_with_filenames(database, table_info, from_folder, files[table_name])
-        
-        print("""
-        #############################################
-        ## Processo de carga dos arquivos finalizado!
-        #############################################
-        """)
+        table_filenames = files[table_name]
+        populate_table(database, table_name, from_folder, table_filenames)
+                
+    logger.info("Processo de carga dos arquivos CNPJ finalizado!")
 
 @timer('Criar indices do banco')
 def generate_database_indices(engine):
     # Criar índices na base de dados:
-    print("""
-    #######################################
-    ## Criar índices na base de dados [...]
-    #######################################
-    """)
+    logger.info("Criando índices na base de dados [...]")
 
-    fields_tables=[
-        ('empresa_cnpj', 'empresa',),
-        ('estabelecimento_cnpj', 'estabelecimento',),
-        ('socios_cnpj', 'socios',),
-        ('simples_cnpj', 'simples',)
-    ]
+    tables = ['empresa', 'estabelecimento', 'socios', 'simples']
+    
+    # Criar índices
+    fields_tables = [(f'{table}_cnpj', table) for table in tables]
     mask="create index {field} on {table}(cnpj_basico); commit;"
     
     with engine.connect() as conn:
-        queries=[ mask.format(field=field_, table=table_) for field_, table_ in fields_tables ]
+        queries = [ mask.format(field=field_, table=table_) for field_, table_ in fields_tables ]
         query_str="\n".join(queries)
         query = text(query_str)
 
@@ -144,13 +148,6 @@ def generate_database_indices(engine):
         except Exception:
             pass
     
-    print("""
-    ############################################################
-    ## Índices criados nas tabelas, para a coluna `cnpj_basico`:
+    logger.info("Índices criados nas tabelas, para a coluna `cnpj_basico`: {tables}")
     
-        - empresa
-        - estabelecimento
-        - socios
-        - simples
-    ############################################################
-    """)
+ 

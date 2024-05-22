@@ -1,7 +1,9 @@
 import re
 from urllib import request
 from bs4 import BeautifulSoup
+from datetime import datetime
 
+from utils.logging import logger
 from utils.misc import delete_var
 from core.constants import DADOS_RF_URL 
 
@@ -11,28 +13,39 @@ def scrap_RF():
 
     # Formatar página e converter em string
     page_items = BeautifulSoup(raw_html, 'lxml')
-    html_str = str(page_items)
 
-    # Obter arquivos
-    files = []
-    text = '.zip'
-    for m in re.finditer(text, html_str):
-        i_start = m.start()-40
-        i_end = m.end()
-        i_loc = html_str[i_start:i_end].find('href=')+6
-        files.append(html_str[i_start+i_loc:i_end])
+    # Find all table rows
+    table_rows = page_items.find_all('tr')
+    
+    # Extract data from each row
+    files_with_date = []
+    for row in table_rows:
+        # Find cells containing filename (anchor tag) and date
+        filename_cell = row.find('a')
+        regex_pattern=r'\d{4}-\d{2}-\d{2}'
+        collect_date=lambda text: text and re.search(regex_pattern, text)
+        date_cell = row.find('td', text=collect_date)
 
-    files_clean = []
-    for i in range(len(files)):
-        if not files[i].find('.zip">') > -1:
-            files_clean.append(files[i])
+        if filename_cell and date_cell:
+            filename = filename_cell.text.strip()
+            
+            if filename.lower().endswith('.zip'):
+                date_text = date_cell.text.strip()
 
-    delete_var(files)
+                # Try converting date text to datetime object (adjust format if needed)
+                try:
+                    updated_at = datetime.strptime(date_text, "%Y-%m-%d %H:%M")
+                    updated_at = updated_at.replace(hour=0, minute=0, second=0, microsecond=0)
+                    updated_at_str = updated_at.strftime("%Y-%m-%d")
+                
+                except ValueError:
+                    # Handle cases where date format doesn't match
+                    logger.error(f"Error parsing date for file: {filename}")
+                    updated_at_str = ''
 
-    print('Arquivos que serão baixados:')
-    i_f = 0
-    for f in files_clean:
-        i_f += 1
-        print(str(i_f) + ' - ' + f)
+                file_info = (updated_at_str, filename)
+                files_with_date.append(file_info)
+            
+    return files_with_date
 
-    return files_clean
+

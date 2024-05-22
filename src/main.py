@@ -1,5 +1,7 @@
 from core.setup import get_sink_folder, setup_database
 from core.etl import get_RF_data, load_database
+from core.scrapper import scrap_RF
+from utils.misc import process_filename, tuple_list_to_dict 
 
 print(
   """ 
@@ -33,21 +35,20 @@ print(
 #   - Qualificação de sócios    : 0.03 s
 # 
 # #############################################################################################
-# Tamanho dos arquivos (Linhas):
-# empresa = 45.811.638
-# estabelecimento = 48.421.619
-# socios = 20.426.417
-# simples = 27.893.923
-# #############################################################################################
 
 # Pastas e banco de dados
 output_files_path, extracted_files_path = get_sink_folder()
 database = setup_database()
 
+base_file_info = scrap_RF()
+
+base_files = [ (process_filename(base_file), date_) for date_, base_file in base_file_info ]
+print(tuple_list_to_dict(base_files))
+
 # # Buscar dados
 # get_RF_data(output_files_path, extracted_files_path)
 
 # Carregar banco
-load_database(database, extracted_files_path)
+# load_database(database, extracted_files_path)
 
-print("""Fim do processo! Você pode utilizar o banco de dados!""")
+# logger.info("""Fim do processo! Você pode utilizar o banco de dados!""")

@@ -4,6 +4,7 @@ from typing import Union
 from sqlalchemy import create_engine
 from psycopg2 import connect, OperationalError
 
+from utils.logging import logger
 from core.models import Database
 from utils.misc import makedir 
 
@@ -47,10 +48,11 @@ def setup_database() -> Union[Database, None]:
         
         engine = create_engine(db_uri)
         
-        print('Connection to the database established!')
+        logger.info('Connection to the database established!')
         return Database(engine)
     
     except OperationalError as e:
-        print(f"Error connecting to database: {e}")
+        summary = f"Error connecting to database"
+        logger.error(f"{summary}: {e}")
         return None
 
