@@ -2,13 +2,12 @@ from timy import timer
 from os import getenv, path
 from typing import Tuple, Union
 from psycopg2 import connect, sql, OperationalError, errors
-import pandas as pd
+import polars as pl
 from sqlalchemy import text
 
 from utils.misc import delete_var, to_sql
-from core.constants import FENCE, TABLES_INFO_DICT
+from core.constants import FENCE, TABLES_INFO_DICT, CHUNK_SIZE
 from core.models import Database, TableInfo
-import sqlalchemy as sa
 
 ##########################################################################
 ## LOAD AND TRANSFORM
@@ -19,35 +18,55 @@ def populate_table_with_filename(
     to_folder: str,
     filename: str
 ): 
-    enum_columns = list(range(0, len(table_info.columns)))
-    artefato = pd.DataFrame(columns=enum_columns)
-    dtypes = { column: 'object' for column in table_info.columns }
+    len_cols=len(table_info.columns)
+    data = {
+        str(col): []
+        for col in range(0, len_cols)
+    }
+    
+    artefato = pl.DataFrame(data=data)
+    dtypes = { column: str for column in table_info.columns }
     extracted_file_path = path.join(to_folder, filename)
 
-    artefato = pd.read_csv(
-        filepath_or_buffer=extracted_file_path,
-        sep=';', skiprows=0, header=None, 
-        dtype=dtypes, encoding=table_info.encoding,
+    reader = pl.read_csv_batched(
+        source=extracted_file_path,
+        batch_size=CHUNK_SIZE,
+        separator=';', 
+        skip_rows=0, 
+        has_header=False, 
+        infer_schema_length=10000,
+        encoding=table_info.encoding,
         low_memory=False
     )
-
-    # Tratamento do arquivo antes de inserir na base:
-    artefato = artefato.reset_index()
-    del artefato['index']
-
-    # Renomear colunas
-    artefato.columns = table_info.columns
-    artefato = table_info.transform_map(artefato)
     
-    # Gravar dados no banco:
-    to_sql(
-        artefato, 
-        filename=extracted_file_path,
-        tablename=table_info.table_name, 
-        con=database.engine, 
-        if_exists='append', 
-        index=False
-    )
+    for artefato in reader:
+        # Tratamento do arquivo antes de inserir na base:
+        artefato = artefato.reset_index()
+        del artefato['index']
+
+        # Renomear colunas
+        artefato.columns = table_info.columns
+        artefato = table_info.transform_map(artefato)
+        
+        print(
+            {
+                "filename":extracted_file_path,
+                "tablename": table_info.table_name, 
+                "con": database.engine, 
+                "if_exists": 'append', 
+                "index": False
+            }
+        )
+
+        # Gravar dados no banco:
+        to_sql(
+            artefato, 
+            filename=extracted_file_path,
+            tablename=table_info.table_name, 
+            con=database.engine, 
+            if_exists='append', 
+            index=False
+        )
     
     print('Arquivos ' + filename + ' inserido com sucesso no banco de dados!')
 
@@ -88,7 +107,6 @@ def populate_database(database, from_folder, files):
         
         label = TABLES_INFO_DICT[table_name]['label']
         columns = TABLES_INFO_DICT[table_name]['columns']
-        expression = TABLES_INFO_DICT[table_name]['expression']
         encoding = TABLES_INFO_DICT[table_name]['encoding']
         transform_map = TABLES_INFO_DICT[table_name].get('transform_map', lambda x: x)
 

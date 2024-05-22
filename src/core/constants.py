@@ -7,7 +7,7 @@ DADOS_RF_URL = 'http://200.152.38.155/CNPJ/'
 
 # Registros por carga
 TAMANHO_DAS_PARTES = 1000000
-CHUNK_SIZE = 1000
+CHUNK_SIZE = 10000
 
 # Miscelaneous
 FENCE_LENGTH = 35
@@ -79,7 +79,7 @@ TABLES_INFO_DICT = {
         'expression': 'EMPRE',
         'transform_map': empresa_transform_map,
         'encoding': 'latin-1'
-    },"""
+    },
     'estabelecimento': {
         'label': 'Estabelecimento',
         'columns': [

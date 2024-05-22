@@ -69,6 +69,13 @@ def check_diff(url, file_name):
 
     return False # arquivos sao iguais
 
+def update_progress(index, total, message):
+    percent = (index * 100) / total
+    curr_perc_pos = f"{index:0{len(str(total))}}/{total}"
+    progress = f'{message} {percent:.2f}% {curr_perc_pos}'
+    
+    stdout.write(f'\r{progress}')
+
 def to_sql(dataframe: pd.DataFrame, **kwargs):
     '''
     Quebra em pedacos a tarefa de inserir registros no banco
@@ -77,20 +84,23 @@ def to_sql(dataframe: pd.DataFrame, **kwargs):
     tablename = kwargs.get('tablename')
     filename = kwargs.get('filename')
 
+    query_args = {
+        "name": tablename,
+        "if_exists": kwargs.get('append'),
+        "con": kwargs.get('con'),
+        "index": kwargs.get('index')
+    }
+    
     def chunker(df):
         return (df[i:i + CHUNK_SIZE] for i in range(0, len(df), CHUNK_SIZE))
 
     for i, df in enumerate(chunker(dataframe)):
         try:
-            df.to_sql(**kwargs)
-            index = i * CHUNK_SIZE
-            percent = (index * 100) / total
-            curr_pos = f"{index:0{len(str(total))}}/{total}"
-            progress = f'{tablename} {percent:.2f}% {curr_pos}'
-            stdout.write(f'\r{progress}')
+            df.to_sql(**query_args)
+            update_progress(i * CHUNK_SIZE, total, tablename)
         
         except Exception as e:
-            message = f"Failed to insert chunk {i + 1} for table {tablename} on file {filename}"
+            message = f"Failed to insert chunk {i + 1} for table {tablename} on file {filename}: {e}"
             logger.error(message)
     
     print(f'\r{tablename} 100% {total}/{total}')
