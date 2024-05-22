@@ -1,5 +1,14 @@
-from loguru import logger
+import logging
 
-# Configure logger to log messages to a file
-logger.add("logs/logfile.log", rotation="500 MB", retention="10 days", compression="zip")
+# Configure logging
+logging.basicConfig(
+    filename="logs/logfile.log",
+    level=logging.ERROR,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    filemode="a",  # Append to existing log file
+)
 
+# Use the logger
+logger = logging.getLogger(__name__)
+
+logger.info("Logging started.")
