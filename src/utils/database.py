@@ -1,18 +1,13 @@
 from timy import timer
-from os import getenv, path
-from typing import Tuple, Union
-from psycopg2 import connect, sql, OperationalError, errors
+from os import path
 import pandas as pd
 from sqlalchemy import text
 
-from utils.dataframe import to_sql, dataframe_chunker_gen
+from utils.dataframe import to_sql
 from utils.misc import delete_var, update_progress, get_line_count
 from core.constants import (
-    FENCE, 
     TABLES_INFO_DICT, 
-    CHUNK_SIZE, 
-    SCHEMA_LENGTH, 
-    ROW_ESTIMATE_COUNT
+    CHUNK_SIZE
 )
 from core.models import Database, TableInfo
 from utils.logging import logger

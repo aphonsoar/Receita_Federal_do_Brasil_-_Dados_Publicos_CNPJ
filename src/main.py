@@ -1,5 +1,4 @@
 from core.setup import get_sink_folder, setup_database
-from core.etl import get_RF_data, load_database
 from core.scrapper import scrap_RF
 from utils.misc import process_filename, tuple_list_to_dict 
 

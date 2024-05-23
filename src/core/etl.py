@@ -15,26 +15,36 @@ from core.constants import TABLES_INFO_DICT, DADOS_RF_URL, LAYOUT_URL
 ####################################################################################################
 ## LER E INSERIR DADOS #############################################################################
 ####################################################################################################
+
 @timer('Ler dados da Receita Federal')
 def get_RF_filenames(extracted_files_path):
+    """
+    Retrieves the filenames of the extracted files from the Receita Federal.
+
+    Args:
+        extracted_files_path (str): The path to the directory containing the extracted files.
+
+    Returns:
+        dict: A dictionary containing the filenames grouped by table name.
+    """
     # Files:
-    items = [ name for name in listdir(extracted_files_path) if name.endswith('') ]
-    
+    items = [name for name in listdir(extracted_files_path) if name.endswith('')]
+
     # Separar arquivos:
     files = {
         table_name: [] for table_name in TABLES_INFO_DICT.keys()
     }
 
-    tablename_list = [ table_name for table_name in TABLES_INFO_DICT.keys() ]
-    trimmed_tablename_list = [ table_name[:5] for table_name in TABLES_INFO_DICT.keys() ]
-    
+    tablename_list = [table_name for table_name in TABLES_INFO_DICT.keys()]
+    trimmed_tablename_list = [table_name[:5] for table_name in TABLES_INFO_DICT.keys()]
+
     tablename_tuples = list(zip(tablename_list, trimmed_tablename_list))
-    
+
     for item in items:
         has_label_map = lambda label: item.lower().find(label[1].lower()) > -1
         this_tablename_tuple = list(filter(has_label_map, tablename_tuples))
 
-        if(len(this_tablename_tuple)!=0):
+        if(len(this_tablename_tuple) != 0):
             this_tablename = this_tablename_tuple[0][0]
             files[this_tablename].append(item)
 
@@ -43,7 +53,15 @@ def get_RF_filenames(extracted_files_path):
 ####################################################################################################
 ## DOWNLOAD ########################################################################################
 ####################################################################################################
+
 def extract_zip_file(file_path, extracted_files_path):
+    """
+    Extracts a zip file to the specified directory.
+
+    Args:
+        file_path (str): The path to the zip file.
+        extracted_files_path (str): The path to the directory where the files will be extracted.
+    """
     with ZipFile(file_path, 'r') as zip_ref:
         zip_ref.extractall(extracted_files_path)
 
@@ -54,14 +72,16 @@ def download_and_extract_files(
     has_progress_bar: bool
 ):
     """
-    Downloads a file from the given URL to the specified output path.
+    Downloads a file from the given URL to the specified output path and extracts it.
 
     Args:
         url (str): The URL of the file to download.
-        output_path (str): The path to save the downloaded file.
+        download_path (str): The path to save the downloaded file.
+        extracted_path (str): The path to the directory where the file will be extracted.
+        has_progress_bar (bool): Whether to display a progress bar during the download.
 
     Raises:
-        OSError: If an error occurs during the download process.
+        OSError: If an error occurs during the download or extraction process.
     """
     file_name = path.basename(url)
     
@@ -81,14 +101,22 @@ def download_and_extract_files(
 
         except OSError as e:
             raise OSError(f"Error downloading {url} or extracting file {file_name}: {e}") from e        
-    
+
 def get_rf_filenames_parallel(
     base_files: list,
     output_path: str, 
     extracted_path: str,
     max_workers = get_max_workers()
 ):
-    
+    """
+    Downloads and extracts the files from the Receita Federal base URLs in parallel.
+
+    Args:
+        base_files (list): A list of base file names to be downloaded.
+        output_path (str): The path to save the downloaded files.
+        extracted_path (str): The path to the directory where the files will be extracted.
+        max_workers (int, optional): The maximum number of concurrent downloads. Defaults to get_max_workers().
+    """
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
             executor.submit(
@@ -109,6 +137,14 @@ def get_rf_filenames_serial(
     output_path: str, 
     extracted_path: str, 
 ):
+    """
+    Downloads and extracts the files from the Receita Federal base URLs serially.
+
+    Args:
+        base_files (list): A list of base file names to be downloaded.
+        output_path (str): The path to save the downloaded files.
+        extracted_path (str): The path to the directory where the files will be extracted.
+    """
     counter = 0
     error_count = 0
     error_basefiles = []
@@ -144,15 +180,17 @@ def download_and_extract_RF_data(
     max_workers: int = get_max_workers()
 ):
     """
-    Downloads files from the Receita Federal base URLs to the specified output path.
+    Downloads files from the Receita Federal base URLs to the specified output path and extracts them.
 
     Args:
         base_files (list): A list of base file names to be downloaded.
         output_path (str): The path to save the downloaded files.
+        extracted_path (str): The path to the directory where the files will be extracted.
+        is_parallel (bool, optional): Whether to download and extract the files in parallel. Defaults to True.
         max_workers (int, optional): The maximum number of concurrent downloads. Defaults to get_max_workers().
 
     Raises:
-        OSError: If an error occurs during the download process.
+        OSError: If an error occurs during the download or extraction process.
     """
 
     if(is_parallel):
@@ -167,12 +205,22 @@ def download_and_extract_RF_data(
 ####################################################################################################
 ## EXTRAÇÃO ########################################################################################
 ####################################################################################################
+
 def extract_RF_data(
     base_files, 
     output_files_path, 
     extracted_files_path, 
     max_workers = get_max_workers()
 ):
+    """
+    Extracts the data from the extracted files.
+
+    Args:
+        base_files (list): A list of base file names to be extracted.
+        output_files_path (str): The path to the directory containing the downloaded files.
+        extracted_files_path (str): The path to the directory where the files will be extracted.
+        max_workers (int, optional): The maximum number of concurrent extractions. Defaults to get_max_workers().
+    """
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         # Use tqdm as a context manager to automatically handle progress bar updates
         with tqdm(total=len(base_files), desc='Descompactando arquivos') as pbar:
@@ -189,6 +237,14 @@ def extract_RF_data(
 
 @timer('Buscar dados da Receita Federal')
 def get_RF_data(to_folder, from_folder, is_parallel=True):
+    """
+    Retrieves and extracts the data from the Receita Federal.
+
+    Args:
+        to_folder (str): The path to the directory where the downloaded files will be saved.
+        from_folder (str): The path to the directory where the extracted files will be stored.
+        is_parallel (bool, optional): Whether to download and extract the files in parallel. Defaults to True.
+    """
     # Raspar dados da página 
     base_files_info = scrap_RF()
 
@@ -202,6 +258,13 @@ def get_RF_data(to_folder, from_folder, is_parallel=True):
     rmtree(to_folder)
 
 def load_database(database, from_folder):
+    """
+    Loads the data from the extracted files into the database.
+
+    Args:
+        database: The database object to load the data into.
+        from_folder (str): The path to the directory containing the extracted files.
+    """
     # Lê e insere dados
     filenames = get_RF_filenames(from_folder)
 

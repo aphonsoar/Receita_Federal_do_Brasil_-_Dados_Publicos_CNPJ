@@ -5,7 +5,17 @@ import subprocess
 import os
 
 
-def run_pip_compile(input_file: str, output_file):
+def run_pip_compile(input_file: str, output_file: str) -> int:
+    """
+    Runs pip-compile command to generate a requirements file.
+
+    Args:
+        input_file (str): Path to the input requirements file.
+        output_file (str): Path to the output requirements file.
+
+    Returns:
+        int: The number of packages in the output file.
+    """
     # Command to run pip-compile
     command = [
         "pip-compile",
@@ -33,9 +43,17 @@ def run_pip_compile(input_file: str, output_file):
 def find_packages_with_comment(
         requirements_file: str,
         pip_compile_output_file: str,
-        requirements_output_file: str):
+        requirements_output_file: str) -> int:
     """
-    Encontra pacores com comentario '# via -r requirements.in' em formato específico.
+    Finds packages with a specific comment in a requirements file and writes them to a new file.
+
+    Args:
+        requirements_file (str): Path to the original requirements file.
+        pip_compile_output_file (str): Path to the pip-compile output file.
+        requirements_output_file (str): Path to the output file for the packages with comments.
+
+    Returns:
+        int: The number of packages with comments in the output file.
     """
     splitted_file = requirements_file.split('.')
     name = splitted_file[0]
@@ -96,5 +114,4 @@ if __name__ == "__main__":
 
     os.remove(tmp_file)
 
-    print(f"Package count before operation: {package_count_before}")
-    print(f"Package count after operation: {package_count_after}")
+    print(f"We removed {package_count_after-package_count_before} packages.")

@@ -2,7 +2,7 @@ from os import getenv, path, getcwd
 from dotenv import load_dotenv  
 from typing import Union
 from sqlalchemy import create_engine
-from psycopg2 import connect, OperationalError
+from psycopg2 import OperationalError
 
 from utils.logging import logger
 from core.models import Database
@@ -52,7 +52,7 @@ def setup_database() -> Union[Database, None]:
         return Database(engine)
     
     except OperationalError as e:
-        summary = f"Error connecting to database"
+        summary = "Error connecting to database"
         logger.error(f"{summary}: {e}")
         return None
 

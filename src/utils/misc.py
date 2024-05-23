@@ -1,15 +1,23 @@
 from sys import stdout
 from os import path, remove, cpu_count
 from requests import head
-from os import path, makedirs
-import pandas as pd
+from os import makedirs
 import subprocess
 import re
 
 from utils.logging import logger
-from core.constants import CHUNK_SIZE
 
 def tuple_list_to_dict(tuple_list: list):
+    """
+    Converts a list of tuples into a dictionary.
+
+    Args:
+        tuple_list (list): A list of tuples.
+
+    Returns:
+        dict: A dictionary where the keys are the first elements of the tuples
+              and the values are sets containing the second elements of the tuples.
+    """
     dict_ = dict()
     
     for key, value in tuple_list: 
@@ -22,7 +30,15 @@ def tuple_list_to_dict(tuple_list: list):
 
 
 def process_filename(filename):
-    
+    """
+    Processes a filename by removing the extension and numbers, and converting it to lowercase.
+
+    Args:
+        filename (str): The filename to process.
+
+    Returns:
+        str: The processed filename.
+    """
     # Split the filename at the last dot (".") to separate the base name and extension
     base_name, _ = filename.rsplit('.', 1)
     
@@ -31,14 +47,13 @@ def process_filename(filename):
 
 def process_filenames(filenames):
     """
-    This function takes a list of filenames and returns a new list with 
-    extensions and numbers removed, and the names converted to lowercase.
+    Processes a list of filenames by removing extensions and numbers, and converting them to lowercase.
 
     Args:
-        filenames: A list of strings representing filenames.
+        filenames (list): A list of strings representing filenames.
 
     Returns:
-        A new list of strings with processed filenames.
+        list: A new list of strings with processed filenames.
     """
     processed_names = []
     for filename in filenames:
@@ -50,6 +65,13 @@ def makedir(
     folder_name: str, 
     is_verbose: bool = False
 ):
+    """
+    Creates a new directory if it doesn't already exist.
+
+    Args:
+        folder_name (str): The name of the folder to create.
+        is_verbose (bool, optional): Whether to log verbose information. Defaults to False.
+    """
     if not path.exists(folder_name):
         makedirs(folder_name)
         
@@ -61,22 +83,40 @@ def makedir(
             logger.warn(f'Folder {repr(str(folder_name))} already exists!')
 
 def get_max_workers():
+    """
+    Gets the maximum number of workers based on the number of CPU cores.
+
+    Returns:
+        int: The maximum number of workers.
+    """
     # Get the number of CPU cores
     num_cores = cpu_count()
 
-    # Ajusta o numero de workers baseado nos requisitos
-    # Você deve dexar alguns cores livres para outras tarefas
+    # Adjust the number of workers based on the requirements
+    # You should leave some cores free for other tasks
     max_workers = num_cores - 1 if num_cores else None
 
     return max_workers
 
 def delete_var(var):
+    """
+    Deletes a variable from memory.
+
+    Args:
+        var: The variable to delete.
+    """
     try:
         del var
     except:
         pass
 
 def this_folder():
+    """
+    Gets the path of the current file.
+
+    Returns:
+        str: The path of the current file.
+    """
     # Get the path of the current file
     current_file_path = path.abspath(__file__)
 
@@ -84,24 +124,39 @@ def this_folder():
     return path.dirname(current_file_path)
 
 def check_diff(url, file_name):
-    '''
-    Verifica se o arquivo no servidor existe no disco e se ele tem o mesmo
-    tamanho no servidor.
-    '''
+    """
+    Checks if the file on the server exists on disk and if it has the same size on the server.
+
+    Args:
+        url (str): The URL of the file on the server.
+        file_name (str): The name of the file on disk.
+
+    Returns:
+        bool: True if the file has not been downloaded yet or if the sizes are different,
+              False if the files are the same.
+    """
     if not path.isfile(file_name):
-        return True # ainda nao foi baixado
+        return True # not downloaded yet
 
     response = head(url)
     new_size = int(response.headers.get('content-length', 0))
     old_size = path.getsize(file_name)
     if new_size != old_size:
         remove(file_name)
-        return True # tamanho diferentes
+        return True # different sizes
 
-    return False # arquivos sao iguais
+    return False # files are the same
 
 # Create this bar_progress method which is invoked automatically from wget:
 def bar_progress(current, total, width=80):
+    """
+    Displays a progress bar for a download.
+
+    Args:
+        current (int): The current number of bytes downloaded.
+        total (int): The total number of bytes to download.
+        width (int, optional): The width of the progress bar. Defaults to 80.
+    """
     progress_message = "Downloading: %d%% [%d / %d] bytes - " % (current / total * 100, current, total)
 
     # Don't use print(): it will print in new line every time.
@@ -110,6 +165,14 @@ def bar_progress(current, total, width=80):
 
 
 def update_progress(index, total, message):
+    """
+    Updates and displays a progress message.
+
+    Args:
+        index (int): The current index.
+        total (int): The total number of items.
+        message (str): The message to display.
+    """
     percent = (index * 100) / total
     curr_perc_pos = f"{index:0{len(str(total))}}/{total}"
     progress = f'{message} {percent:.2f}% {curr_perc_pos}'

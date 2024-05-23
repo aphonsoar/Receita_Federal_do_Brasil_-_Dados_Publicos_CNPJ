@@ -4,10 +4,15 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 
 from utils.logging import logger
-from utils.misc import delete_var
 from core.constants import DADOS_RF_URL 
 
 def scrap_RF():
+    """
+    Scrapes the RF (Receita Federal) website to extract file names and their corresponding dates.
+
+    Returns:
+        A list of tuples, where each tuple contains the date (in the format 'YYYY-MM-DD') and the filename.
+    """
     raw_html = request.urlopen(DADOS_RF_URL)
     raw_html = raw_html.read()
 
