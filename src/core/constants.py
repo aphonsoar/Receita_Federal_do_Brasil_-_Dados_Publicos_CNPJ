@@ -78,7 +78,7 @@ TABLES_INFO_DICT = {
             'data_situacao_especial'
         ],
         'expression': 'ESTABELE',
-	'encoding': 'latin-1'
+	    'encoding': 'latin-1'
     },
     'socios': {
         'label': 'Socios',
