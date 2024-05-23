@@ -5,6 +5,7 @@ pandas==2.2.2
 psycopg2-binary==2.9.9
 python-dotenv==1.0.0
 requests==2.30.0
+ruff==0.4.5
 sqlalchemy==2.0.30
 timy==0.4.2
 tqdm==4.66.2
