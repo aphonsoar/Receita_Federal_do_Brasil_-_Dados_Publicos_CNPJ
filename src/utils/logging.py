@@ -22,7 +22,7 @@ if environment == 'development':
     )
     
     logging.basicConfig(
-        level=logging.INFO,  
+        level=logging.WARN,  
         format="%(asctime)s - %(levelname)s - %(message)s",
         handlers=[
             logging.StreamHandler(sys.stderr),

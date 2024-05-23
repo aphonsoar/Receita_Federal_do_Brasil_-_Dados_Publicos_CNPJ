@@ -6,8 +6,7 @@ from sqlalchemy import text
 from utils.dataframe import to_sql
 from utils.misc import delete_var, update_progress, get_line_count
 from core.constants import (
-    TABLES_INFO_DICT, 
-    CHUNK_SIZE
+    TABLES_INFO_DICT, CHUNK_SIZE
 )
 from core.models import Database, TableInfo
 from utils.logging import logger
@@ -21,6 +20,18 @@ def populate_table_with_filename(
     to_folder: str,
     filename: str
 ): 
+    """
+    Populates a table in the database with data from a file.
+
+    Args:
+        database (Database): The database object.
+        table_info (TableInfo): The table information object.
+        to_folder (str): The folder path where the file is located.
+        filename (str): The name of the file.
+
+    Returns:
+        None
+    """
     len_cols=len(table_info.columns)
     data = {
         str(col): []
@@ -78,6 +89,18 @@ def populate_table_with_filenames(
     from_folder: str,
     filenames: list
 ):
+    """
+    Populates a table in the database with data from multiple files.
+
+    Args:
+        database (Database): The database object.
+        table_info (TableInfo): The table information object.
+        from_folder (str): The folder path where the files are located.
+        filenames (list): A list of file names.
+
+    Returns:
+        None
+    """
     title=f'Arquivos de tabela {table_info.label.upper()}:'
     logger.info(title)
     
@@ -103,6 +126,18 @@ def populate_table_with_filenames(
 
 
 def populate_table(database: Database, table_name: str, from_folder: str, table_files: list):
+    """
+    Populates a table in the database with data from multiple files.
+
+    Args:
+        database (Database): The database object.
+        table_name (str): The name of the table.
+        from_folder (str): The folder path where the files are located.
+        table_files (list): A list of file names.
+
+    Returns:
+        None
+    """
     table_info = TABLES_INFO_DICT[table_name]
     
     label = table_info['label']
@@ -115,6 +150,17 @@ def populate_table(database: Database, table_name: str, from_folder: str, table_
 
 @timer(ident='Popular banco')
 def populate_database(database, from_folder, files):
+    """
+    Populates the database with data from multiple tables.
+
+    Args:
+        database (Database): The database object.
+        from_folder (str): The folder path where the files are located.
+        files (dict): A dictionary containing the file names for each table.
+
+    Returns:
+        None
+    """
     for table_name in TABLES_INFO_DICT:
         table_filenames = files[table_name]
         populate_table(database, table_name, from_folder, table_filenames)
@@ -123,12 +169,21 @@ def populate_database(database, from_folder, files):
 
 @timer('Criar indices do banco')
 def generate_database_indices(engine):
+    """
+    Generates indices for the database tables.
+
+    Args:
+        engine: The database engine.
+
+    Returns:
+        None
+    """
     # Criar índices na base de dados:
     logger.info("Criando índices na base de dados [...]")
 
+    # Criar índices
     tables = ['empresa', 'estabelecimento', 'socios', 'simples']
     
-    # Criar índices
     fields_tables = [(f'{table}_cnpj', table) for table in tables]
     mask="create index {field} on {table}(cnpj_basico); commit;"
     
@@ -145,4 +200,3 @@ def generate_database_indices(engine):
     
     logger.info("Índices criados nas tabelas, para a coluna `cnpj_basico`: {tables}")
     
- 

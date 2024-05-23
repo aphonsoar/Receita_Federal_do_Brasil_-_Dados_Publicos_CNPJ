@@ -1,11 +1,36 @@
 from sys import stdout
 from os import path, remove, cpu_count
+from zipfile import ZipFile
 from requests import head
 from os import makedirs
 import subprocess
 import re
 
 from utils.logging import logger
+
+def extract_zip_file(file_path, extracted_files_path):
+    """
+    Extracts a zip file to the specified directory.
+
+    Args:
+        file_path (str): The path to the zip file.
+        extracted_files_path (str): The path to the directory where the files will be extracted.
+    """
+    with ZipFile(file_path, 'r') as zip_ref:
+        zip_ref.extractall(extracted_files_path)
+        
+def list_zip_contents(zip_file_path):
+    """
+    Lists the filenames and other information about files within a zip archive.
+
+    Args:
+        zip_file_path (str): Path to the zip archive.
+
+    Returns:
+        list: A list of ZipInfo objects containing information about each file in the zip.
+    """
+    with ZipFile(zip_file_path, 'r') as zip_ref:
+        return zip_ref.infolist()
 
 def tuple_list_to_dict(tuple_list: list):
     """

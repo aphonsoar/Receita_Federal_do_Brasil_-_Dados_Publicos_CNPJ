@@ -1,6 +1,14 @@
+from sqlalchemy import text
+from datetime import datetime
+from os import path, getcwd
+
 from core.setup import get_sink_folder, setup_database
+from core.etl import get_RF_data, load_database
 from core.scrapper import scrap_RF
-from utils.misc import process_filename, tuple_list_to_dict 
+from utils.logging import logger
+from utils.misc import process_filename, tuple_list_to_dict
+from utils.models import create_audit
+from utils.misc import list_zip_contents
 
 print(
   """ 
@@ -38,16 +46,21 @@ print(
 # Pastas e banco de dados
 output_files_path, extracted_files_path = get_sink_folder()
 database = setup_database()
+files_info = scrap_RF()
 
-base_file_info = scrap_RF()
+audits = []
+for file_info in files_info:
+    audit = create_audit(database, file_info.filename, file_info.updated_at)
+    if audit:
+        audits.append(audit)
 
-base_files = [ (process_filename(base_file), date_) for date_, base_file in base_file_info ]
-print(tuple_list_to_dict(base_files))
+# For testing purposes
+audits = [audits[0]]
 
-# # Buscar dados
-# get_RF_data(output_files_path, extracted_files_path)
+# Buscar dados
+audits, zip_files = get_RF_data(audits, output_files_path, extracted_files_path)
 
 # Carregar banco
-# load_database(database, extracted_files_path)
+load_database(database, extracted_files_path, audits)
 
-# logger.info("""Fim do processo! Você pode utilizar o banco de dados!""")
+logger.info("""Fim do processo! Você pode utilizar o banco de dados!""")

@@ -3,6 +3,8 @@ from dotenv import load_dotenv
 from typing import Union
 from sqlalchemy import create_engine
 from psycopg2 import OperationalError
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
 from utils.logging import logger
 from core.models import Database
@@ -47,9 +49,14 @@ def setup_database() -> Union[Database, None]:
         db_uri = f'postgresql://{user}:{passw}@{host}:{port}/{database_name}'
         
         engine = create_engine(db_uri)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        
+        # Create all tables defined using the Base class (if not already created)
+        Base = declarative_base()
+        Base.metadata.create_all(engine)
         
         logger.info('Connection to the database established!')
-        return Database(engine)
+        return Database(engine=engine, session_maker=SessionLocal)
     
     except OperationalError as e:
         summary = "Error connecting to database"
