@@ -1,59 +1,32 @@
-import logging
-import sys
 import os
-from datetime import datetime
-from dotenv import load_dotenv
-from os import getenv
+from os import remove, scandir, path
+from glob import glob
+from shutil import rmtree
 
-now_str = datetime.now().strftime("%Y-%m-%d")
+# Function to clear the latest 'n' items (files or folders)
+def clear_latest_items(path_, n):
+    """
+    Clears the latest 'n' items (files or folders) in the specified path.
 
-# Configure logging with a single handler
-# Set the overall logging level
-load_dotenv()
-environment = getenv('ENVIRONMENT')
+    Args:
+        path (str): The path to the directory containing the items.
+        n (int): The number of latest items to clear.
 
-if environment == 'development':
-    logging.basicConfig(
-        level=logging.INFO,  
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-        ]
-    )
-    
-    logging.basicConfig(
-        level=logging.WARN,  
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stderr),
-        ]
-    )
+    Raises:
+        FileNotFoundError: If the specified path is not found.
+        OSError: If an error occurs during removal.
+    """
+    if not path.exists(path_):
+        raise FileNotFoundError(f"Path not found: {path_}")
 
-# Create separate log files for errors and info (optional)
-error_file = f"logs/{now_str}/error_log.log"
-info_file = f"logs/{now_str}/info_log.log"
+    # Get all items sorted by modification time (newest first)
+    items = sorted(scandir(path_), key=path.getmtime, reverse=True)
 
-error_path = os.path.dirname(error_file)
-info_path = os.path.dirname(info_file)
-
-# Create the directory structure if it doesn't exist
-os.makedirs(info_path, exist_ok=True)
-os.makedirs(error_path, exist_ok=True)
-
-error_handler = logging.FileHandler(error_file, mode="a")
-error_handler.setLevel(logging.ERROR)  # Only log errors to this file
-
-info_handler = logging.FileHandler(info_file, mode="a")
-info_handler.setLevel(logging.INFO)  # log INFO and above to this file
-
-warn_handler = logging.FileHandler(info_file, mode="a")
-warn_handler.setLevel(logging.WARN)  # Only log INFO and above to this file
-
-logging.getLogger().addHandler(error_handler)
-logging.getLogger().addHandler(info_handler)
-logging.getLogger().addHandler(warn_handler)
-
-# Use the logger
-logger = logging.getLogger(__name__)
-
-logger.info("Logging started.")
+    # Clear the latest 'n' items
+    if len(items) > n:
+        for item in items[1:n]:
+            if path.isfile(item.path):
+                remove(item.path)
+            else:
+                # Remove directory (ignore errors)
+                rmtree(item.path, ignore_errors=True)  

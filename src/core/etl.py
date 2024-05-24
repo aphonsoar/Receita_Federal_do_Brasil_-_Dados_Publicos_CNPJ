@@ -3,22 +3,39 @@ from os import path, listdir
 from timy import timer
 from tqdm import tqdm
 from shutil import rmtree
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import (
+    ThreadPoolExecutor, 
+    as_completed
+)
 from datetime import datetime
 from os import listdir, path
+from functools import reduce
 
-from utils.misc import extract_zip_file
-from core.models import AuditDB
-from utils.logging import logger
+from models.pydantic import AuditMetadata
+from models.database import AuditDB
+from core.scrapper import scrap_RF
+from core.constants import (
+    TABLES_INFO_DICT, 
+    DADOS_RF_URL, 
+    LAYOUT_URL
+)
+
+from utils.misc import (
+    extract_zip_file, 
+    invert_dict_list, 
+    get_file_size,
+)
+from setup.logging import logger
 from utils.misc import (
     check_diff, 
     get_max_workers, 
     list_zip_contents, 
     process_filename
 )
-from core.scrapper import scrap_RF
-from utils.database import populate_database, generate_database_indices
-from core.constants import TABLES_INFO_DICT, DADOS_RF_URL, LAYOUT_URL
+from utils.database import (
+    populate_database, 
+    generate_database_indices
+)
 from utils.models import create_audit
 
 ####################################################################################################
@@ -37,25 +54,28 @@ def get_RF_filenames(extracted_files_path):
         dict: A dictionary containing the filenames grouped by table name.
     """
     # Files:
-    items = [name for name in listdir(extracted_files_path) if name.endswith('')]
+    items = listdir(extracted_files_path)
 
     # Separar arquivos:
-    files = {
-        table_name: [] for table_name in TABLES_INFO_DICT.keys()
-    }
-
-    tablename_list = [table_name for table_name in TABLES_INFO_DICT.keys()]
-    trimmed_tablename_list = [table_name[:5] for table_name in TABLES_INFO_DICT.keys()]
-
+    files = dict()
+    tablename_list = [ table_name for table_name in TABLES_INFO_DICT.keys() ]
+    trimmed_tablename_list = [ table_name[:5] for table_name in TABLES_INFO_DICT.keys() ]
     tablename_tuples = list(zip(tablename_list, trimmed_tablename_list))
-
+    
+    # Filtrar arquivos
     for item in items:
         has_label_map = lambda label: item.lower().find(label[1].lower()) > -1
         this_tablename_tuple = list(filter(has_label_map, tablename_tuples))
-
-        if(len(this_tablename_tuple) != 0):
+        
+        has_alias = len(this_tablename_tuple) != 0
+        if(has_alias):
             this_tablename = this_tablename_tuple[0][0]
-            files[this_tablename].append(item)
+            
+            if(this_tablename not in files):
+                files[this_tablename] = [item]
+
+            else:
+                files[this_tablename].append(item)
 
     return files
 
@@ -81,7 +101,7 @@ def download_and_extract_files(
     """
     file_name = path.basename(url)
     full_path = path.join(download_path, file_name)
-
+    
     if not path.exists(full_path) or check_diff(url, full_path):
         try:
             # Assuming download updates progress bar itself
@@ -91,7 +111,9 @@ def download_and_extract_files(
             else:
                 download(url, out=download_path, bar=None)
 
+            # Update audit metadata
             audit.audi_downloaded_at = datetime.now()
+            audit.audi_file_size_bytes = get_file_size(full_path)
             
             # Assuming extraction updates progress bar itself
             extract_zip_file(full_path, extracted_path)
@@ -121,6 +143,7 @@ def get_rf_filenames_parallel(
         extracted_path (str): The path to the directory where the files will be extracted.
         max_workers (int, optional): The maximum number of concurrent downloads. Defaults to get_max_workers().
     """
+    
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = [
             executor.submit(
@@ -142,7 +165,7 @@ def get_rf_filenames_parallel(
             except Exception as e:
                 summary="An error occurred on parallelization"
                 logger.error(f"{summary}: {e}")
-                
+        
         return results
 
 def get_rf_filenames_serial(
@@ -166,6 +189,7 @@ def get_rf_filenames_serial(
     
     for index, audit in enumerate(audits):
         try:
+            # Download and extract file
             audit_ = download_and_extract_files(
                 audit,
                 DADOS_RF_URL + audit.audi_filename, 
@@ -210,15 +234,16 @@ def download_and_extract_RF_data(
     Raises:
         OSError: If an error occurs during the download or extraction process.
     """
-
+    # Download RF files
     if(is_parallel):
         audits = get_rf_filenames_parallel(audits, output_path, extracted_path, max_workers)
     else:
         audits = get_rf_filenames_serial(audits, output_path, extracted_path)
 
-    # Download layout (assuming download remains unchanged)
-    logger.info("Baixando layout")
+    # Download layout
+    logger.info("Baixando layout...")
     download(LAYOUT_URL, out=output_path, bar=None)
+    logger.info("Layout baixado com sucesso!")
     
     return audits
 
@@ -235,20 +260,37 @@ def get_RF_data(audits, from_folder, to_folder, is_parallel=True):
     # Extrair nomes dos arquivos
     audits = download_and_extract_RF_data(audits, from_folder, to_folder, is_parallel)
     
-    zip_files = {
+    # Traduzir arquivos zipados e seus conteúdos
+    zip_file_dict = {
         zip_file: [
             zip_file_content.filename
             for zip_file_content in list_zip_contents(path.join(from_folder, zip_file))
         ]
-        for zip_file in listdir(from_folder) if zip_file.rsplit('.', 1)[1] == 'zip'
+        for zip_file in listdir(from_folder) 
+        if zip_file.rsplit('.', 1)[1] == 'zip'
     }
+    
+    # Arquivos
+    zip_files = [ audit.audi_filename for audit in audits ]
+    union_map = lambda acc, zip_file_content: list(set(acc).union(set(zip_file_content))), 
+    files_map = map(lambda zip_file: zip_file_dict[zip_file], zip_files)
+    
+    zip_file_content = reduce(union_map, files_map)
+    
+    zip_files_content = [ audit.audi_filename for audit in audits ]
+    
+    audit_metadata = AuditMetadata(
+        audit_list=audits, 
+        zip_file_dict=zip_file_dict,
+        zip_files_content=zip_file_content
+    )    
     
     # Deletar arquivos baixados
     rmtree(from_folder)
     
-    return audits, zip_files
+    return audit_metadata
 
-def load_database(database, from_folder, audits):
+def load_database(database, from_folder, audit_metadata):
     """
     Loads the data from the extracted files into the database.
 
@@ -257,11 +299,15 @@ def load_database(database, from_folder, audits):
         from_folder (str): The path to the directory containing the extracted files.
     """
     # Lê e insere dados
-    filenames = get_RF_filenames(from_folder)
-
-    # Popula banco com dados da Receita
-    populate_database(database, from_folder, filenames)
-
-    # Cria índices na tabela em coluna 'cnpj_basico'
-    generate_database_indices(database.engine)
+    file_to_zip = invert_dict_list(audit_metadata.zip_file_dict)
+    table_to_filenames = get_RF_filenames(from_folder)
+    tablename_to_zips = {
+        tablename: list(set(map(lambda filename: file_to_zip[filename], filenames)))
+        for tablename, filenames in table_to_filenames.items()
+    }
+    
+    # # Popula banco com dados da Receita
+    # populate_database(database, from_folder, table_to_filenames, audit_metadata)
+        
+    
 

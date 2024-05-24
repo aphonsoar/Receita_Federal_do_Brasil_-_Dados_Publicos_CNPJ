@@ -1,12 +1,55 @@
 from sys import stdout
-from os import path, remove, cpu_count
+from os import path, remove, cpu_count, stat
 from zipfile import ZipFile
 from requests import head
 from os import makedirs
 import subprocess
 import re
 
-from utils.logging import logger
+from setup.logging import logger
+
+def invert_dict_list(dict_: dict):
+    """
+    Inverts a dictionary where the values are lists of keys.
+    
+    Args:
+        dict_ (dict): The dictionary to be inverted.
+        
+    Returns:
+        dict: The inverted dictionary where the keys are the values from the original dictionary
+              and the values are the corresponding keys from the original dictionary.
+    """
+    return {
+        value: key
+        for key, value_list in dict_.items()
+        for value in value_list
+    }
+    
+def get_file_size(file_path):
+    """
+    This function retrieves the size of a file in bytes.
+
+    Args:
+        file_path (str): The path to the file.
+
+    Returns:
+        int: The size of the file in bytes, or None if the file doesn't exist or can't be accessed.
+
+    Raises:
+        OSError: If an error occurs while accessing the file.
+    """
+    try:
+        # Use os.stat to get file information in a platform-independent way
+        file_stats = stat(file_path)
+        return file_stats.st_size
+    except OSError as e:
+        # Raise OSError for potential file access issues
+        raise OSError(f"Error accessing file: {file_path}. Reason: {e}") from e
+    except Exception as e:
+    # Catch unexpected exceptions and re-raise with more context
+        raise Exception(f"Unexpected error getting file size for {file_path}: {e}") from e
+
+    
 
 def extract_zip_file(file_path, extracted_files_path):
     """

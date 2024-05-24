@@ -1,15 +1,14 @@
 from timy import timer
 from os import path
 import pandas as pd
-from sqlalchemy import text
 
 from utils.dataframe import to_sql
 from utils.misc import delete_var, update_progress, get_line_count
 from core.constants import (
     TABLES_INFO_DICT, CHUNK_SIZE
 )
-from core.models import Database, TableInfo
-from utils.logging import logger
+from models.pydantic import Database, TableInfo
+from setup.logging import logger
 
 ##########################################################################
 ## LOAD AND TRANSFORM
@@ -106,9 +105,8 @@ def populate_table_with_filenames(
     
     # Drop table (if exists)
     with database.engine.connect() as conn:
-        query_str=f"DROP TABLE IF EXISTS {table_info.table_name};"
-        query = text(query_str)
-
+        query=f"DROP TABLE IF EXISTS {table_info.table_name};"
+        
         # Execute the compiled SQL string
         conn.execute(query)
     
@@ -125,7 +123,12 @@ def populate_table_with_filenames(
     logger.info(f'Arquivos de {table_info.label} finalizados!')
 
 
-def populate_table(database: Database, table_name: str, from_folder: str, table_files: list):
+def populate_table(
+    database: Database, 
+    table_name: str, 
+    from_folder: str, 
+    table_files: list
+):
     """
     Populates a table in the database with data from multiple files.
 
@@ -148,25 +151,6 @@ def populate_table(database: Database, table_name: str, from_folder: str, table_
     table_info = TableInfo(label, table_name, columns, encoding, transform_map)
     populate_table_with_filenames(database, table_info, from_folder, table_files)
 
-@timer(ident='Popular banco')
-def populate_database(database, from_folder, files):
-    """
-    Populates the database with data from multiple tables.
-
-    Args:
-        database (Database): The database object.
-        from_folder (str): The folder path where the files are located.
-        files (dict): A dictionary containing the file names for each table.
-
-    Returns:
-        None
-    """
-    for table_name in TABLES_INFO_DICT:
-        table_filenames = files[table_name]
-        populate_table(database, table_name, from_folder, table_filenames)
-                
-    logger.info("Processo de carga dos arquivos CNPJ finalizado!")
-
 @timer('Criar indices do banco')
 def generate_database_indices(engine):
     """
@@ -182,21 +166,44 @@ def generate_database_indices(engine):
     logger.info("Criando índices na base de dados [...]")
 
     # Criar índices
-    tables = ['empresa', 'estabelecimento', 'socios', 'simples']
-    
+    tables = [ 'empresa', 'estabelecimento', 'socios', 'simples' ]
     fields_tables = [(f'{table}_cnpj', table) for table in tables]
-    mask="create index {field} on {table}(cnpj_basico); commit;"
+    mask="create index {field} if not exists on {table}(cnpj_basico); commit;"
     
     with engine.connect() as conn:
-        queries = [ mask.format(field=field_, table=table_) for field_, table_ in fields_tables ]
-        query_str="\n".join(queries)
-        query = text(query_str)
-
+        queries = [ 
+            mask.format(field=field_, table=table_) 
+            for field_, table_ in fields_tables 
+        ]
+        query="\n".join(queries)
+        
         # Execute the compiled SQL string
         try:
             conn.execute(query)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Erro ao criar índices: {e}")
     
-    logger.info("Índices criados nas tabelas, para a coluna `cnpj_basico`: {tables}")
+    message = f"Índices criados nas tabelas, para a coluna `cnpj_basico`: {tables}"
+    logger.info(message)
     
+    
+@timer(ident='Popular banco')
+def populate_database(database, from_folder, table_to_filenames, audit_metadata):
+    """
+    Populates the database with data from multiple tables.
+
+    Args:
+        database (Database): The database object.
+        from_folder (str): The folder path where the files are located.
+        files (dict): A dictionary containing the file names for each table.
+
+    Returns:
+        None
+    """
+    for table_name in table_to_filenames:
+        table_filenames = table_to_filenames[table_name]
+        populate_table(database, table_name, from_folder, table_filenames)
+    
+    logger.info("Processo de carga dos arquivos CNPJ finalizado!")
+    
+    generate_database_indices(database.engine)

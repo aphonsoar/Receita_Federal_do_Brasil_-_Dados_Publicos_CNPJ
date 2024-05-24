@@ -3,9 +3,9 @@ from urllib import request
 from bs4 import BeautifulSoup
 from datetime import datetime
 
-from utils.logging import logger
+from setup.logging import logger
 from core.constants import DADOS_RF_URL 
-from core.models import CNPJFile
+from models.pydantic import CNPJZipFile
 
 def scrap_RF():
     """
@@ -35,7 +35,6 @@ def scrap_RF():
         is_size_type = lambda text: text.endswith('K') or text.endswith('M') or text.endswith('G')
         size_cell = row.find('td', text=lambda text: text and is_size_type(text))
 
-
         if filename_cell and date_cell:
             filename = filename_cell.text.strip()
             
@@ -52,7 +51,7 @@ def scrap_RF():
                     logger.error(f"Error parsing date for file: {filename}")
                     updated_at_str = ''
 
-                file_info = CNPJFile(filename=filename, updated_at=updated_at)
+                file_info = CNPJZipFile(filename=filename, updated_at=updated_at)
                 files_info.append(file_info)
             
     return files_info

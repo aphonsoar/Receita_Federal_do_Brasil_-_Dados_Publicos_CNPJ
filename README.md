@@ -16,7 +16,7 @@ Nesse repositório consta um processo de ETL para:
 
 ## Base de dados:
 
-- Fonte de dados: https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-jurdica---cnpj.
+- Fonte de dados: https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj.
 - Layout: https://www.gov.br/receitafederal/dados/cnpj-metadados.pdf.
 
 ---------------------

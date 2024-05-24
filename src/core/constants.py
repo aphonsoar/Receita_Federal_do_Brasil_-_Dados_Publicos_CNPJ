@@ -1,17 +1,16 @@
 def repeat_token(token: str, n: int):
     return ''.join([token] * n)
 
-# Sourc
+# Source and target
 filename='NOVOLAYOUTDOSDADOSABERTOSDOCNPJ.pdf'
 file_route = '/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/arquivos/'
 layout_host = 'https://www.gov.br'
 LAYOUT_URL = f'{layout_host}{file_route}{filename}'
+# Você também pode acessar por: https://dados.rfb.gov.br/CNPJ/
 DADOS_RF_URL = 'http://200.152.38.155/CNPJ/'
 
-# Registros por carga
-ROW_ESTIMATE_COUNT = 1000
+# Chunk size for download and extraction 
 CHUNK_SIZE = 10000
-SCHEMA_LENGTH = 10000
 
 # Miscelaneous
 FENCE_LENGTH = 35
@@ -27,6 +26,7 @@ def empresa_transform_map(artifact):
 
     return artifact
 
+# Tabelas
 TABLES_INFO_DICT = {
     'empresa': {
         'label': 'Empresa',

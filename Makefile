@@ -44,8 +44,6 @@ search: ## Searchs for a token in the code. Usage: make search token=your_token
 	--exclude=poetry.lock \
 	-e "$(token)"
 
-grep -rnw . --exclude-dir=venv --exclude-dir=.git --exclude=poetry.lock -e "$(token)"
-
 replace: ## Replaces a token in the code. Usage: make replace token=your_token
 	sed -i 's/$(token)/$(new_token)/g' $$(grep -rl "$(token)" . \
 		--exclude-dir=venv \
