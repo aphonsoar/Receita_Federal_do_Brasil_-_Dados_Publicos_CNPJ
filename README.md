@@ -79,4 +79,6 @@ Pelo volume de dados, as tabelas  `empresa`, `estabelecimento`, `socios` e `simp
 
 ### Modelo de Entidade Relacionamento:
 
-![alt text](https://github.com/brunolnetto/Dados_RFB/blob/master/images/Dados_RFB_ERD.png)
+![alt text](https://github.com/brunolnetto/RF_CNPJ/blob/master/images/Dados_RFB_ERD.png)
+
+
