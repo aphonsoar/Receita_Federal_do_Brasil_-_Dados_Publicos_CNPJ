@@ -245,23 +245,41 @@ def load_database(database, from_folder, audit_metadata):
     table_to_filenames = audit_metadata.tablename_to_zipfile_to_files
     zip_filenames = [ audit.audi_filename for audit in audit_metadata.audit_list ]
     
-    zip_tablenames_set = set(table_to_filenames.keys())
+    zipfiles = sum(
+        [
+            list(zipfile_file_dict.keys())
+            for zipfile_file_dict in audit_metadata.tablename_to_zipfile_to_files.values()
+        ], []
+    )
     
+    table_to_zip_dict = {
+        tablename: zip_to_files.keys()
+        for tablename, zip_to_files in audit_metadata.tablename_to_zipfile_to_files.items()
+    }
+    
+    zip_tablenames_set = set(table_to_filenames.keys())
+
     for table_name, zipfile_content_dict in table_to_filenames.items():
         table_files_list = list(zipfile_content_dict.values())
+        
         table_filenames = sum(table_files_list, [])
         
+        # Populate this table
         populate_table(database, table_name, from_folder, table_filenames)
-
+        
+        table_zipfiles = table_to_zip_dict[table_name]
         for index, audit in enumerate(audit_metadata.audit_list):
-            if audit.audi_filename in zip_tablenames_set:
+            if audit.audi_filename in table_zipfiles:
                 audit_metadata.audit_list[index].audi_inserted_at = datetime.now()
 
     logger.info(f"Carga dos arquivos zip {zip_filenames} finalizado!")
-    
+
     # Generate tables indices
     tables_with_indices = {'empresa', 'estabelecimento', 'socios', 'simples'}
     tables_renew_indices = list(zip_tablenames_set.intersection(tables_with_indices))
-    
-    if(len(tables_renew_indices) != 0):
+
+    has_new_tables = len(tables_renew_indices) != 0
+    if(has_new_tables):
         generate_tables_indices(database.engine, tables_renew_indices)
+
+    return audit_metadata

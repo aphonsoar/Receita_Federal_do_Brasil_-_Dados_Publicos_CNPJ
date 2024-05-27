@@ -20,11 +20,12 @@ def clear_latest_items(path_, n):
         raise FileNotFoundError(f"Path not found: {path_}")
 
     # Get all items sorted by modification time (newest first)
-    items = sorted(scandir(path_), key=path.getmtime, reverse=True)
-
+    items = sorted(scandir(path_), key=path.getmtime)
+    
     # Clear the latest 'n' items
-    if len(items) > n:
-        for item in items[1:n]:
+    items_len = len(items)
+    if items_len > n:
+        for item in items[0:items_len-n]:
             if path.isfile(item.path):
                 remove(item.path)
             else:

@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Union, List
 from os import getcwd, path, listdir
 from functools import reduce 
+from uuid import uuid4
 
 from sqlalchemy import or_, func
 
@@ -33,6 +34,7 @@ def create_audit(
             latest_updated_at = query.filter(is_filename).first()[0]
             
             new_audit = AuditDB(
+                audi_id=uuid4(),
                 audi_filename=filename,
                 audi_file_size_bytes=0,
                 audi_source_updated_at=current_updated_at,
@@ -54,7 +56,7 @@ def create_audit(
                     return new_audit
                 
                 else:
-                    summary='Skipping create entry for file {filename}.'
+                    summary=f'Skipping create entry for file {filename}.'
                     explanation='Existing processed_at is later or equal.'
                     error_message=f"{summary} {explanation}"
                     logger.warn(error_message)
@@ -76,7 +78,6 @@ def create_audits(database: Database, files_info: List) -> List:
 
 def insert_audit(
     database: Database, 
-    filename: str, 
     new_audit: AuditDB
 ) -> Union[AuditDB, None]:
     """
@@ -86,11 +87,16 @@ def insert_audit(
         filename: The filename for the audit entry.
         new_processed_at: The new processed datetime value.
     """
+    filename = new_audit.audi_filename
     if database.engine:
         with database.session_maker() as session:
             # Check if the new processed_at is greater
-            if new_audit.is_precedence_met():
-                session.add(new_audit)                
+            
+            if new_audit.is_precedence_met:
+                session.add(new_audit)
+                
+                # Commit the changes to the database
+                session.commit()
             else:
                 timestamps = [
                     new_audit.audi_created_at,
@@ -100,11 +106,20 @@ def insert_audit(
                 ]
                 error_message=f"Skipping insert audit for file {filename}. "
                 logger.warn(error_message)
-                
+
                 return None
 
     else:
         logger.error("Error connecting to the database!")
+
+def insert_audits(database, new_audits: List):
+    for new_audit in new_audits:
+        try:
+            insert_audit(database, new_audit)
+        
+        except Exception as e:
+            summary=f"Error inserting audit for file {new_audit.audi_filename}"
+            logger.error(f"{summary}: {e}")
 
 def create_audit_metadata(
     database: Database,

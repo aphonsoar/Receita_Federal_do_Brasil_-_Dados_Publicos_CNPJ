@@ -53,25 +53,28 @@ class AuditDB(Base):
         Checks if the current timestamp (audi_evaluated_at) is greater than the previous timestamps in order.
         
         Returns:
-          bool: True if the precedence is met, False otherwise.
+            bool: True if the precedence is met, False otherwise.
         """
         previous_timestamps = [
-          self.audi_created_at,
-          self.audi_downloaded_at,
-          self.audi_processed_at,
-          self.audi_inserted_at,
+            self.audi_created_at,
+            self.audi_downloaded_at,
+            self.audi_processed_at,
+            self.audi_inserted_at,
         ]
         
         is_met = True
         and_map = lambda a, b: a and b
-        
-        for index, current_timestamp in enumerate(previous_timestamps):
-          greater_than_map = lambda a: a < current_timestamp
-          are_greater=map(greater_than_map, previous_timestamps[0:index+1])
-          this_is_met = reduce(and_map, are_greater)
-          
-          is_met = is_met and this_is_met
 
+        for index, current_timestamp in enumerate(previous_timestamps):
+            previous_t = previous_timestamps[0:index]
+
+            if index > 0:
+                greater_than_map = lambda a: a < current_timestamp
+                are_greater = map(greater_than_map, previous_t)
+                this_is_met = reduce(and_map, are_greater)
+
+                is_met = is_met and this_is_met
+            
         return is_met
     
     def __get_pydantic_core_schema__(self):

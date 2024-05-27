@@ -58,6 +58,10 @@ class AuditMetadata(BaseModel):
     audit_list: List
     tablename_to_zipfile_to_files: Dict
     
+    def __repr__(self) -> str:
+        args=f'audit_list={self.audit_list}, tablename_to_zipfile_to_files={self.tablename_to_zipfile_to_files}'
+        return f"AuditMetadata({args})"
+    
 class Database(NamedTuple):
   """
   This class represents a database connection and session management object.
