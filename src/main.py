@@ -1,3 +1,8 @@
+""" 
+  - Nome do projeto : ETL - CNPJs da Receita Federal do Brasil
+  - Objetivo        : Baixar, transformar e carregar dados da Receita Federal do Brasil
+"""
+
 from datetime import datetime
 from os import path, getcwd, listdir
 
@@ -10,13 +15,6 @@ from core.etl import get_RF_data, load_database
 from core.scrapper import scrap_RF
 
 from utils.models import insert_audit
-
-print(
-  """ 
-    - Nome do projeto : ETL - CNPJs da Receita Federal do Brasil
-    - Objetivo        : Baixar, transformar e carregar dados da Receita Federal do Brasil
-  """
-)
 
 # ############################################################################################ 
 # INFORMAÇÕES SOBRE O PROCESSO
@@ -46,8 +44,8 @@ database = setup_database()
 files_info = scrap_RF()
 print(files_info)
 
-# # NOTE: Test purposes only
-# files_info = [ files_info[0] ]
+# NOTE: Test purposes only
+files_info = [ files_info[0] ]
 
 # Create audits
 audits = create_audits(database, files_info)
