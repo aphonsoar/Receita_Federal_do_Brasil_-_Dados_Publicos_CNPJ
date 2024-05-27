@@ -1,7 +1,7 @@
 import pandas as pd
 
 from core.constants import CHUNK_SIZE
-from utils.logging import logger
+from setup.logging import logger
 
 def dataframe_chunker_gen(df: pd.DataFrame):
     '''
@@ -50,7 +50,7 @@ def to_sql(dataframe: pd.DataFrame, **kwargs):
     query_args = {
         "name": tablename,
         "if_exists": if_exists,
-        "conn": conn,
+        "con": conn,
         "index": index
     }
 

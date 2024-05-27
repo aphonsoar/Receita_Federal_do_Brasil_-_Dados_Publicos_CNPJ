@@ -1,17 +1,20 @@
-from core.setup import get_sink_folder, setup_database
+from datetime import datetime
+from os import path, getcwd, listdir
+
+from setup.logging import logger
+
+from utils.models import  create_audits, create_audit_metadata
+
+from core.base import get_sink_folder, setup_database
+from core.etl import get_RF_data, load_database
 from core.scrapper import scrap_RF
-from utils.misc import process_filename, tuple_list_to_dict 
+
+from utils.models import insert_audit
 
 print(
   """ 
-    - Projeto           : Receita Federal do Brasil - Dados Públicos CNPJ
-    - Objetivo          : Baixar, transformar e carregar dados da Receita Federal do Brasil
-    - Fonte de dados    : http://200.152.38.155/CNPJ/
-    - Desenvolvido por  : [
-        (Aphonso Henrique do Amaral Rafael, @aphonsoar), 
-        (Bruno Henrique Lobo Netto Peixoto, @brunolnetto)
-      ]
-    - Contribua         : https://github.com/brunolnetto/Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ
+    - Nome do projeto : ETL - CNPJs da Receita Federal do Brasil
+    - Objetivo        : Baixar, transformar e carregar dados da Receita Federal do Brasil
   """
 )
 
@@ -35,19 +38,32 @@ print(
 # 
 # #############################################################################################
 
-# Pastas e banco de dados
-output_files_path, extracted_files_path = get_sink_folder()
+# Folders and database setup
+output_path, extracted_path = get_sink_folder()
 database = setup_database()
 
-base_file_info = scrap_RF()
+# Get files info
+files_info = scrap_RF()
+print(files_info)
 
-base_files = [ (process_filename(base_file), date_) for date_, base_file in base_file_info ]
-print(tuple_list_to_dict(base_files))
+# # NOTE: Test purposes only
+# files_info = [ files_info[0] ]
 
-# # Buscar dados
-# get_RF_data(output_files_path, extracted_files_path)
+# Create audits
+audits = create_audits(database, files_info)
 
-# Carregar banco
-# load_database(database, extracted_files_path)
+if audits:
+  # Retrieve data
+  audits = get_RF_data(audits, output_path, extracted_path)
 
-# logger.info("""Fim do processo! Você pode utilizar o banco de dados!""")
+  # Create audit metadata
+  audit_metadata = create_audit_metadata(database, audits, output_path)
+
+  # Load database
+  audit_metadata = load_database(database, extracted_path, audit_metadata)
+
+  # Insert audit metadata
+  for audit in audit_metadata.audit_list:
+      insert_audit(database, audit)
+
+logger.info("""Fim do processo! Você pode utilizar o banco de dados!""")

@@ -3,24 +3,39 @@ from dotenv import load_dotenv
 from typing import Union
 from sqlalchemy import create_engine
 from psycopg2 import OperationalError
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
 
-from utils.logging import logger
-from core.models import Database
+from setup.logging import logger
+from models.pydantic import Database
 from utils.misc import makedir 
 
 def get_sink_folder():
+    """
+    Get the output and extracted file paths based on the environment variables or default paths.
+
+    Returns:
+        Tuple[str, str]: A tuple containing the output file path and the extracted file path.
+    """
+    env_path = path.join(getcwd(), '.env')
+    load_dotenv(env_path)
+    
     root_path = path.join(getcwd(), 'data') 
     default_output_file_path = path.join(root_path, 'OUTPUT_FILES')
-    default_input_file_path = path.join(root_path, 'EXTRACTED_FILES') 
+    default_input_file_path = path.join(root_path, 'EXTRACTED_FILES')
     
     # Read details from ".env" file:
-    output_files = getenv('OUTPUT_FILES_PATH', default_output_file_path)
-    extracted_files = getenv('EXTRACTED_FILES_PATH', default_input_file_path)
-
-    makedir(output_files)
-    makedir(extracted_files)
-
-    return output_files, extracted_files
+    output_route = getenv('OUTPUT_PATH', default_output_file_path)
+    extract_route = getenv('EXTRACT_PATH', default_input_file_path)
+    
+    # Create the output and extracted folders if they do not exist
+    output_folder = path.join(root_path, output_route)
+    extract_folder = path.join(root_path, extract_route)
+        
+    makedir(output_folder)
+    makedir(extract_folder)
+    
+    return output_folder, extract_folder
 
 def setup_database() -> Union[Database, None]:
     """
@@ -30,7 +45,6 @@ def setup_database() -> Union[Database, None]:
         Database: A NamedTuple with engine and conn attributes for the database connection.
         None: If there was an error connecting to the database.
     
-    >>> setup_database()
     """
     env_path = path.join(getcwd(), '.env')
     load_dotenv(env_path)
@@ -47,9 +61,14 @@ def setup_database() -> Union[Database, None]:
         db_uri = f'postgresql://{user}:{passw}@{host}:{port}/{database_name}'
         
         engine = create_engine(db_uri)
+        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        
+        # Create all tables defined using the Base class (if not already created)
+        Base = declarative_base()
+        Base.metadata.create_all(engine)
         
         logger.info('Connection to the database established!')
-        return Database(engine)
+        return Database(engine=engine, session_maker=SessionLocal)
     
     except OperationalError as e:
         summary = "Error connecting to database"
