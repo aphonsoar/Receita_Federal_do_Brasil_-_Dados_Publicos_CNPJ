@@ -8,12 +8,12 @@ current_hour=$(date +%H)
 new_minute=$(( (10#$current_minute + $frequency) % 60 ))
 new_hour=$(( current_hour + ( (10#$current_minute + $frequency) / 60 ) ))
 
-root_path = "/root/github/RF_CNPJ"
-source_path = f"$root_path/src/main.py"
-log_file=f"$root_path/logs/crontab_logs.log"
+root_path="/root/github/RF_CNPJ"
+source_path="$root_path/src/main.py"
+log_file="$root_path/logs/crontab_logs.log"
 
 # Prepare the cron entry
-cron_entry="$new_minute/5 $new_hour * * * /usr/bin/python3 $source_path >> $log_file 2>&1"
+cron_entry="*/5 * * * * /usr/bin/python3 $source_path >> $log_file 2>&1"
 
 # Add the entry to the crontab
 (crontab -l; echo "$cron_entry") | crontab -
