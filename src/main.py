@@ -1,10 +1,9 @@
 from datetime import datetime
-from os import path, getcwd
+from os import path, getcwd, listdir
 
 from setup.logging import logger
-from utils.misc import process_filename, tuple_list_to_dict
-from utils.models import create_audit
-from utils.misc import list_zip_contents
+
+from utils.models import  create_audits, create_audit_metadata
 
 from core.base import get_sink_folder, setup_database
 from core.etl import get_RF_data, load_database
@@ -37,26 +36,26 @@ print(
 # 
 # #############################################################################################
 
-# Pastas e banco de dados
+# Folders and database setup
 output_path, extracted_path = get_sink_folder()
 database = setup_database()
 
-# Obter informações dos arquivos
+# Get files info
 files_info = scrap_RF()
 
-audits = []
-for file_info in files_info:
-    audit = create_audit(database, file_info.filename, file_info.updated_at)
-    if audit:
-        audits.append(audit)
+# NOTE: Test purposes only
+files_info = [ files_info[0] ]
 
-# For testing purposes
-audits = [ audits[0] ]
+# Create audits
+audits = create_audits(database, files_info)
 
-# Buscar dados
-audit_metadata = get_RF_data(audits, output_path, extracted_path)
+# Retrieve data
+audits = get_RF_data(audits, output_path, extracted_path)
 
-# Carregar banco
+# Create audit metadata
+audit_metadata = create_audit_metadata(database, audits, output_path)
+
+# Load database
 load_database(database, extracted_path, audit_metadata)
 
 # logger.info("""Fim do processo! Você pode utilizar o banco de dados!""")

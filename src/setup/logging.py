@@ -1,5 +1,6 @@
 import logging
 import sys
+
 from datetime import datetime
 from dotenv import load_dotenv
 from os import getenv, makedirs, path
@@ -35,7 +36,8 @@ time_str = datetime.now().strftime("%H_%M")
 log_root_path = f'logs/{date_str}'
 
 # Clear the latest 5 files (adjust 'n' as needed)
-clear_latest_items(log_root_path, 5)
+if path.exists(log_root_path):
+    clear_latest_items(log_root_path, 5)
 
 base_path = f"{log_root_path}/{time_str}"
 error_file = f"{base_path}/error_log.log"

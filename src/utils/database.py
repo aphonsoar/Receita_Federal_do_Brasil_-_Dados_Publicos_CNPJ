@@ -1,6 +1,7 @@
 from timy import timer
 from os import path
 import pandas as pd
+from sqlalchemy import text
 
 from utils.dataframe import to_sql
 from utils.misc import delete_var, update_progress, get_line_count
@@ -77,11 +78,14 @@ def populate_table_with_filename(
             verbose=False
         )
     
-    logger.info('Arquivos ' + filename + ' inserido com sucesso no banco de dados!')
+    update_progress(row_count_estimation, row_count_estimation, filename)
+    print()
+    
+    logger.info('Arquivo ' + filename + ' inserido com sucesso no banco de dados!')
 
     delete_var(df)
 
-@timer('Popular tabela')
+# @timer('Popular tabela')
 def populate_table_with_filenames(
     database: Database, 
     table_info: TableInfo, 
@@ -105,7 +109,7 @@ def populate_table_with_filenames(
     
     # Drop table (if exists)
     with database.engine.connect() as conn:
-        query=f"DROP TABLE IF EXISTS {table_info.table_name};"
+        query=text(f"DROP TABLE IF EXISTS {table_info.table_name};")
         
         # Execute the compiled SQL string
         conn.execute(query)
@@ -143,16 +147,18 @@ def populate_table(
     """
     table_info = TABLES_INFO_DICT[table_name]
     
+    # Get table info
     label = table_info['label']
     columns = table_info['columns']
     encoding = table_info['encoding']
     transform_map = table_info.get('transform_map', lambda x: x)
 
+    # Create table info object
     table_info = TableInfo(label, table_name, columns, encoding, transform_map)
     populate_table_with_filenames(database, table_info, from_folder, table_files)
 
 @timer('Criar indices do banco')
-def generate_database_indices(engine):
+def generate_tables_indices(engine, tables):
     """
     Generates indices for the database tables.
 
@@ -166,44 +172,25 @@ def generate_database_indices(engine):
     logger.info("Criando índices na base de dados [...]")
 
     # Criar índices
-    tables = [ 'empresa', 'estabelecimento', 'socios', 'simples' ]
     fields_tables = [(f'{table}_cnpj', table) for table in tables]
-    mask="create index {field} if not exists on {table}(cnpj_basico); commit;"
+    mask="create index {field} on {table}(cnpj_basico);"
     
-    with engine.connect() as conn:
-        queries = [ 
-            mask.format(field=field_, table=table_) 
-            for field_, table_ in fields_tables 
-        ]
-        query="\n".join(queries)
-        
-        # Execute the compiled SQL string
-        try:
-            conn.execute(query)
-        except Exception as e:
-            logger.error(f"Erro ao criar índices: {e}")
-    
-    message = f"Índices criados nas tabelas, para a coluna `cnpj_basico`: {tables}"
-    logger.info(message)
-    
-    
-@timer(ident='Popular banco')
-def populate_database(database, from_folder, table_to_filenames, audit_metadata):
-    """
-    Populates the database with data from multiple tables.
+    try:
+        with engine.connect() as conn:
+            queries = [ 
+                mask.format(field=field_, table=table_) 
+                for field_, table_ in fields_tables 
+            ]
+            query=text("\n".join(queries) + "\n" + "commit")
+            
+            # Execute the compiled SQL string
+            try:
+                conn.execute(query)
+            except Exception as e:
+                logger.error(f"Erro ao criar índices: {e}")
 
-    Args:
-        database (Database): The database object.
-        from_folder (str): The folder path where the files are located.
-        files (dict): A dictionary containing the file names for each table.
-
-    Returns:
-        None
-    """
-    for table_name in table_to_filenames:
-        table_filenames = table_to_filenames[table_name]
-        populate_table(database, table_name, from_folder, table_filenames)
+        message = f"Índices criados nas tabelas, para a coluna `cnpj_basico`: {tables}"
+        logger.info(message)
     
-    logger.info("Processo de carga dos arquivos CNPJ finalizado!")
-    
-    generate_database_indices(database.engine)
+    except Exception as e:
+        logger.error(f"Erro ao criar índices: {e}") 

@@ -1,11 +1,15 @@
 from datetime import datetime
-from typing import Union
+from typing import Union, List
+from os import getcwd, path, listdir
+from functools import reduce 
 
 from sqlalchemy import or_, func
 
-from models.pydantic import Database 
+from models.pydantic import Database, AuditMetadata 
 from models.database import AuditDB
 from setup.logging import logger 
+from utils.misc import list_zip_contents, invert_dict_list
+from utils.etl import get_zip_to_tablename
 
 def create_audit(
     database: Database, 
@@ -27,7 +31,7 @@ def create_audit(
             query = session.query(latest_source_updated_at)
             
             latest_updated_at = query.filter(is_filename).first()[0]
-
+            
             new_audit = AuditDB(
                 audi_filename=filename,
                 audi_file_size_bytes=0,
@@ -44,6 +48,7 @@ def create_audit(
                 return new_audit
 
             else:
+                
                 if(current_updated_at > latest_updated_at):
                     # Create and insert the new entry
                     return new_audit
@@ -58,6 +63,16 @@ def create_audit(
 
     else:
         logger.error("Error connecting to the database!")
+
+def create_audits(database: Database, files_info: List) -> List:
+    audits = []
+    for file_info in files_info:    
+        audit = create_audit(database, file_info.filename, file_info.updated_at)
+
+        if audit:
+            audits.append(audit)
+            
+    return audits
 
 def insert_audit(
     database: Database, 
@@ -90,6 +105,57 @@ def insert_audit(
 
     else:
         logger.error("Error connecting to the database!")
+
+def create_audit_metadata(
+    database: Database,
+    audits: List,
+    to_path: str
+):  
+    """
+    Creates audit metadata based on the provided database, files information, and destination path.
+
+    Args:
+        database (Database): The database object used for creating audits.
+        files_info (List): A list of file information objects.
+        to_path (str): The destination path for the files.
+
+    Returns:
+        AuditMetadata: An object containing the audit list, zip file dictionary, unzipped files list,
+        zipped files list, and zipped file to tablename dictionary.
+    """    
+    # Traduzir arquivos zipados e seus conteúdos
+    zip_file_dict = {
+        zip_filename: [
+            zip_file_content.filename
+            for zip_file_content in list_zip_contents(path.join(to_path, zip_filename))
+        ]
+        for zip_filename in map(lambda audit: audit.audi_filename, audits)
+    }
+
+    # Arquivos
+    zip_files = [ audit.audi_filename for audit in audits ]
+    union_map = lambda acc, zip_file_content: list(set(acc).union(set(zip_file_content))), 
+    
+    files_map = map(lambda zip_file: zip_file_dict[zip_file], zip_files)
+
+    unzipped_files_list = reduce(union_map, files_map)
+    zipped_files = [ audit.audi_filename for audit in audits ]
+
+    zipfiles_to_tablenames = get_zip_to_tablename(zip_file_dict)
+    tablename_to_zipfile_dict = invert_dict_list(zipfiles_to_tablenames)
+
+    tablename_to_zipfile_to_files = {
+        tablename: {
+            zipfile: zip_file_dict[zipfile]
+            for zipfile in zipfiles
+        }
+        for tablename, zipfiles in tablename_to_zipfile_dict.items()
+    }
+
+    return AuditMetadata(
+        audit_list=audits,
+        tablename_to_zipfile_to_files=tablename_to_zipfile_to_files,
+    )
 
 def delete_filename_on_audit(database: Database, filename: str):
     """

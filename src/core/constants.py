@@ -6,6 +6,7 @@ filename='NOVOLAYOUTDOSDADOSABERTOSDOCNPJ.pdf'
 file_route = '/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/arquivos/'
 layout_host = 'https://www.gov.br'
 LAYOUT_URL = f'{layout_host}{file_route}{filename}'
+
 # Você também pode acessar por: https://dados.rfb.gov.br/CNPJ/
 DADOS_RF_URL = 'http://200.152.38.155/CNPJ/'
 

@@ -50,7 +50,7 @@ def to_sql(dataframe: pd.DataFrame, **kwargs):
     query_args = {
         "name": tablename,
         "if_exists": if_exists,
-        "conn": conn,
+        "con": conn,
         "index": index
     }
 

@@ -26,59 +26,20 @@ from utils.misc import (
     get_file_size,
 )
 from setup.logging import logger
-from utils.misc import (
-    check_diff, 
+from utils.misc import ( 
     get_max_workers, 
     list_zip_contents, 
     process_filename
 )
 from utils.database import (
-    populate_database, 
-    generate_database_indices
+    populate_table,
+    generate_tables_indices,
 )
 from utils.models import create_audit
 
 ####################################################################################################
 ## LER E INSERIR DADOS #############################################################################
 ####################################################################################################
-
-@timer('Ler dados da Receita Federal')
-def get_RF_filenames(extracted_files_path):
-    """
-    Retrieves the filenames of the extracted files from the Receita Federal.
-
-    Args:
-        extracted_files_path (str): The path to the directory containing the extracted files.
-
-    Returns:
-        dict: A dictionary containing the filenames grouped by table name.
-    """
-    # Files:
-    items = listdir(extracted_files_path)
-
-    # Separar arquivos:
-    files = dict()
-    tablename_list = [ table_name for table_name in TABLES_INFO_DICT.keys() ]
-    trimmed_tablename_list = [ table_name[:5] for table_name in TABLES_INFO_DICT.keys() ]
-    tablename_tuples = list(zip(tablename_list, trimmed_tablename_list))
-    
-    # Filtrar arquivos
-    for item in items:
-        has_label_map = lambda label: item.lower().find(label[1].lower()) > -1
-        this_tablename_tuple = list(filter(has_label_map, tablename_tuples))
-        
-        has_alias = len(this_tablename_tuple) != 0
-        if(has_alias):
-            this_tablename = this_tablename_tuple[0][0]
-            
-            if(this_tablename not in files):
-                files[this_tablename] = [item]
-
-            else:
-                files[this_tablename].append(item)
-
-    return files
-
 
 def download_and_extract_files(
     audit: AuditDB, 
@@ -102,7 +63,7 @@ def download_and_extract_files(
     file_name = path.basename(url)
     full_path = path.join(download_path, file_name)
     
-    if not path.exists(full_path) or check_diff(url, full_path):
+    if path.exists(full_path):
         try:
             # Assuming download updates progress bar itself
             if(has_progress_bar):
@@ -110,7 +71,7 @@ def download_and_extract_files(
                 
             else:
                 download(url, out=download_path, bar=None)
-
+            
             # Update audit metadata
             audit.audi_downloaded_at = datetime.now()
             audit.audi_file_size_bytes = get_file_size(full_path)
@@ -213,13 +174,11 @@ def get_rf_filenames_serial(
         
         logger.info(f"({index}/{total_count}) arquivos baixados. {error_count} erros: {error_basefiles}")
 
-@timer('Baixar e extrair arquivos da Receita Federal')
+# @timer('Baixar e extrair arquivos da Receita Federal')
 def download_and_extract_RF_data(
     audits: list, 
     output_path: str, 
-    extracted_path: str, 
-    is_parallel: bool = True,
-    max_workers: int = get_max_workers()
+    extracted_path: str
 ):
     """
     Downloads files from the Receita Federal base URLs to the specified output path and extracts them.
@@ -234,6 +193,11 @@ def download_and_extract_RF_data(
     Raises:
         OSError: If an error occurs during the download or extraction process.
     """
+    max_workers = get_max_workers()
+    
+    # Check if parallel processing is enabled
+    is_parallel = max_workers > 1
+    
     # Download RF files
     if(is_parallel):
         audits = get_rf_filenames_parallel(audits, output_path, extracted_path, max_workers)
@@ -247,8 +211,8 @@ def download_and_extract_RF_data(
     
     return audits
 
-@timer('Buscar dados da Receita Federal')
-def get_RF_data(audits, from_folder, to_folder, is_parallel=True):
+# @timer('Buscar dados da Receita Federal')
+def get_RF_data(audits, from_folder, to_folder):
     """
     Retrieves and extracts the data from the Receita Federal.
 
@@ -258,56 +222,46 @@ def get_RF_data(audits, from_folder, to_folder, is_parallel=True):
         is_parallel (bool, optional): Whether to download and extract the files in parallel. Defaults to True.
     """
     # Extrair nomes dos arquivos
-    audits = download_and_extract_RF_data(audits, from_folder, to_folder, is_parallel)
-    
-    # Traduzir arquivos zipados e seus conteúdos
-    zip_file_dict = {
-        zip_file: [
-            zip_file_content.filename
-            for zip_file_content in list_zip_contents(path.join(from_folder, zip_file))
-        ]
-        for zip_file in listdir(from_folder) 
-        if zip_file.rsplit('.', 1)[1] == 'zip'
-    }
-    
-    # Arquivos
-    zip_files = [ audit.audi_filename for audit in audits ]
-    union_map = lambda acc, zip_file_content: list(set(acc).union(set(zip_file_content))), 
-    files_map = map(lambda zip_file: zip_file_dict[zip_file], zip_files)
-    
-    zip_file_content = reduce(union_map, files_map)
-    
-    zip_files_content = [ audit.audi_filename for audit in audits ]
-    
-    audit_metadata = AuditMetadata(
-        audit_list=audits, 
-        zip_file_dict=zip_file_dict,
-        zip_files_content=zip_file_content
-    )    
+    audits = download_and_extract_RF_data(audits, from_folder, to_folder)
     
     # Deletar arquivos baixados
-    rmtree(from_folder)
+    # rmtree(from_folder)
     
-    return audit_metadata
+    return audits
 
+# @timer(ident='Popular banco')
 def load_database(database, from_folder, audit_metadata):
     """
-    Loads the data from the extracted files into the database.
+    Populates the database with data from multiple tables.
 
     Args:
-        database: The database object to load the data into.
-        from_folder (str): The path to the directory containing the extracted files.
-    """
-    # Lê e insere dados
-    file_to_zip = invert_dict_list(audit_metadata.zip_file_dict)
-    table_to_filenames = get_RF_filenames(from_folder)
-    tablename_to_zips = {
-        tablename: list(set(map(lambda filename: file_to_zip[filename], filenames)))
-        for tablename, filenames in table_to_filenames.items()
-    }
-    
-    # # Popula banco com dados da Receita
-    # populate_database(database, from_folder, table_to_filenames, audit_metadata)
-        
-    
+        database (Database): The database object.
+        from_folder (str): The folder path where the files are located.
+        files (dict): A dictionary containing the file names for each table.
 
+    Returns:
+        None
+    """
+    table_to_filenames = audit_metadata.tablename_to_zipfile_to_files
+    zip_filenames = [ audit.audi_filename for audit in audit_metadata.audit_list ]
+    
+    zip_tablenames_set = set(table_to_filenames.keys())
+    
+    for table_name, zipfile_content_dict in table_to_filenames.items():
+        table_files_list = list(zipfile_content_dict.values())
+        table_filenames = sum(table_files_list, [])
+        
+        populate_table(database, table_name, from_folder, table_filenames)
+
+        for index, audit in enumerate(audit_metadata.audit_list):
+            if audit.audi_filename in zip_tablenames_set:
+                audit_metadata.audit_list[index].audi_inserted_at = datetime.now()
+
+    logger.info(f"Carga dos arquivos zip {zip_filenames} finalizado!")
+    
+    # Generate tables indices
+    tables_with_indices = {'empresa', 'estabelecimento', 'socios', 'simples'}
+    tables_renew_indices = list(zip_tablenames_set.intersection(tables_with_indices))
+    
+    if(len(tables_renew_indices) != 0):
+        generate_tables_indices(database.engine, tables_renew_indices)

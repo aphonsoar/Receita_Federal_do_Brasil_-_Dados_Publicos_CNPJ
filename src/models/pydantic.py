@@ -56,7 +56,7 @@ class ZipContent(BaseModel):
 
 class AuditMetadata(BaseModel):
     audit_list: List
-    zip_file_dict: Dict
+    tablename_to_zipfile_to_files: Dict
     
 class Database(NamedTuple):
   """
@@ -68,7 +68,6 @@ class Database(NamedTuple):
   """
   engine: callable
   session_maker: callable
-
 
 class TableInfo(NamedTuple):
     """Represents information about a table.

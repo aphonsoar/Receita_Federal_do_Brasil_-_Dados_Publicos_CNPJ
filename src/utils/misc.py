@@ -19,11 +19,15 @@ def invert_dict_list(dict_: dict):
         dict: The inverted dictionary where the keys are the values from the original dictionary
               and the values are the corresponding keys from the original dictionary.
     """
-    return {
-        value: key
-        for key, value_list in dict_.items()
-        for value in value_list
-    }
+    inverted_dict = dict()
+    for key, values_list in dict_.items():
+        for value in values_list:
+            if value not in inverted_dict:
+                inverted_dict[value] = [key]
+            else: 
+                inverted_dict[value].append(key)
+    
+    return inverted_dict
     
 def get_file_size(file_path):
     """
@@ -42,14 +46,14 @@ def get_file_size(file_path):
         # Use os.stat to get file information in a platform-independent way
         file_stats = stat(file_path)
         return file_stats.st_size
+    
     except OSError as e:
         # Raise OSError for potential file access issues
         raise OSError(f"Error accessing file: {file_path}. Reason: {e}") from e
+
     except Exception as e:
     # Catch unexpected exceptions and re-raise with more context
         raise Exception(f"Unexpected error getting file size for {file_path}: {e}") from e
-
-    
 
 def extract_zip_file(file_path, extracted_files_path):
     """
