@@ -149,13 +149,7 @@ def create_audit_metadata(
 
     # Arquivos
     zip_files = [ audit.audi_filename for audit in audits ]
-    union_map = lambda acc, zip_file_content: list(set(acc).union(set(zip_file_content))), 
     
-    files_map = map(lambda zip_file: zip_file_dict[zip_file], zip_files)
-
-    unzipped_files_list = reduce(union_map, files_map)
-    zipped_files = [ audit.audi_filename for audit in audits ]
-
     zipfiles_to_tablenames = get_zip_to_tablename(zip_file_dict)
     tablename_to_zipfile_dict = invert_dict_list(zipfiles_to_tablenames)
 

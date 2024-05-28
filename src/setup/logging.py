@@ -10,9 +10,9 @@ from utils.logging import clear_latest_items
 # Configure logging with a single handler
 # Set the overall logging level
 load_dotenv()
-environment = getenv('ENVIRONMENT', 'development')
+ENVIRONMENT = getenv('ENVIRONMENT', 'development')
 
-if environment == 'development':
+if ENVIRONMENT == 'development':
     logging.basicConfig(
         level=logging.INFO,  
         format="%(asctime)s - %(levelname)s - %(message)s",
@@ -36,8 +36,9 @@ time_str = datetime.now().strftime("%H_%M")
 log_root_path = f'logs/{date_str}'
 
 # Clear the latest 5 files (adjust 'n' as needed)
+LOG_FILES_HORIZON = int(getenv('LOG_FILES_HORIZON', 5))
 if path.exists(log_root_path):
-    clear_latest_items(log_root_path, 5)
+    clear_latest_items(log_root_path, LOG_FILES_HORIZON)
 
 base_path = f"{log_root_path}/{time_str}"
 error_file = f"{base_path}/error_log.log"

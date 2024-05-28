@@ -1,8 +1,9 @@
 bs4==0.0.2
 importlib-metadata==7.1.0
 lxml==5.2.2
-pandas==2.2.2
+pandas==2.0.2
 psycopg2-binary==2.9.9
+pydantic==2.7.1
 python-dotenv==1.0.0
 requests==2.30.0
 ruff==0.4.5

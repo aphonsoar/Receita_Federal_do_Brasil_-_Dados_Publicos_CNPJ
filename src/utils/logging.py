@@ -1,6 +1,5 @@
 import os
 from os import remove, scandir, path
-from glob import glob
 from shutil import rmtree
 
 # Function to clear the latest 'n' items (files or folders)

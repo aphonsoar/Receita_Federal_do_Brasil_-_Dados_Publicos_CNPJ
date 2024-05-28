@@ -1,41 +1,18 @@
 from wget import download 
-from os import path, listdir
-from timy import timer
 from tqdm import tqdm
 from shutil import rmtree
-from concurrent.futures import (
-    ThreadPoolExecutor, 
-    as_completed
-)
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
-from os import listdir, path
-from functools import reduce
+from os import path
 
-from models.pydantic import AuditMetadata
 from models.database import AuditDB
-from core.scrapper import scrap_RF
-from core.constants import (
-    TABLES_INFO_DICT, 
-    DADOS_RF_URL, 
-    LAYOUT_URL
-)
+from core.constants import DADOS_RF_URL, LAYOUT_URL
 
-from utils.misc import (
-    extract_zip_file, 
-    invert_dict_list, 
-    get_file_size,
-)
+from utils.misc import extract_zip_file, get_file_size
 from setup.logging import logger
-from utils.misc import ( 
-    get_max_workers, 
-    list_zip_contents, 
-    process_filename
-)
-from utils.database import (
-    populate_table,
-    generate_tables_indices,
-)
-from utils.models import create_audit
+from utils.misc import get_max_workers
+from utils.database import populate_table, generate_tables_indices
+
 
 ####################################################################################################
 ## LER E INSERIR DADOS #############################################################################
@@ -63,31 +40,30 @@ def download_and_extract_files(
     file_name = path.basename(url)
     full_path = path.join(download_path, file_name)
     
-    if path.exists(full_path):
-        try:
-            # Assuming download updates progress bar itself
-            if(has_progress_bar):
-                download(url, out=download_path)
-                
-            else:
-                download(url, out=download_path, bar=None)
-            
-            # Update audit metadata
-            audit.audi_downloaded_at = datetime.now()
-            audit.audi_file_size_bytes = get_file_size(full_path)
-            
-            # Assuming extraction updates progress bar itself
-            extract_zip_file(full_path, extracted_path)
-            audit.audi_processed_at = datetime.now()
-            
-            return audit
+    try:
+        # Assuming download updates progress bar itself
+        if(has_progress_bar):
+            download(url, out=download_path)
 
-        except OSError as e:
-            summary=f"Error downloading {url} or extracting file {file_name}"
-            message=f"{summary}: {e}"
-            logger.error(message)
+        else:
+            download(url, out=download_path, bar=None)
             
-            return None
+        # Update audit metadata
+        audit.audi_downloaded_at = datetime.now()
+        audit.audi_file_size_bytes = get_file_size(full_path)
+        
+        # Assuming extraction updates progress bar itself
+        extract_zip_file(full_path, extracted_path)
+        audit.audi_processed_at = datetime.now()
+        
+        return audit
+
+    except OSError as e:
+        summary=f"Error downloading {url} or extracting file {file_name}"
+        message=f"{summary}: {e}"
+        logger.error(message)
+        
+        return None
 
 def get_rf_filenames_parallel(
     audits: list,
@@ -106,6 +82,7 @@ def get_rf_filenames_parallel(
     """
     
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        
         futures = [
             executor.submit(
                 download_and_extract_files, 
@@ -223,9 +200,6 @@ def get_RF_data(audits, from_folder, to_folder):
     """
     # Extrair nomes dos arquivos
     audits = download_and_extract_RF_data(audits, from_folder, to_folder)
-    
-    # Deletar arquivos baixados
-    # rmtree(from_folder)
     
     return audits
 

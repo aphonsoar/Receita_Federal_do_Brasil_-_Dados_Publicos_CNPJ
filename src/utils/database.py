@@ -60,7 +60,7 @@ def populate_table_with_filename(
         # Tratamento do arquivo antes de inserir na base:
         df_chunk = df_chunk.reset_index()
         del df_chunk['index']
-        
+
         # Renomear colunas
         df_chunk.columns = table_info.columns
         df_chunk = table_info.transform_map(df_chunk)

@@ -1,9 +1,5 @@
 from setup.logging import logger
-from core.constants import (
-    TABLES_INFO_DICT, 
-    DADOS_RF_URL, 
-    LAYOUT_URL
-)
+from core.constants import TABLES_INFO_DICT
 
 tablename_list = [ table_name for table_name in TABLES_INFO_DICT.keys() ]
 trimmed_tablename_list = [ table_name[:5] for table_name in TABLES_INFO_DICT.keys() ]

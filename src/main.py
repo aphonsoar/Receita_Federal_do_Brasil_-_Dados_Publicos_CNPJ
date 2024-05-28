@@ -2,8 +2,8 @@
   - Nome do projeto : ETL - CNPJs da Receita Federal do Brasil
   - Objetivo        : Baixar, transformar e carregar dados da Receita Federal do Brasil
 """
-from datetime import datetime
-from os import path, getcwd, listdir, getenv
+from os import getenv
+from shutil import rmtree
 
 from setup.logging import logger
 
@@ -44,7 +44,7 @@ files_info = scrap_RF()
 
 # NOTE: Test purposes only
 if getenv('ENVIRONMENT', 'development') == 'development':
-  files_info = [ files_info[0] ]
+  files_info = [ files_info[0], files_info[21] ]
 
 # Create audits
 audits = create_audits(database, files_info)
@@ -52,9 +52,12 @@ audits = create_audits(database, files_info)
 if audits:
   # Retrieve data
   audits = get_RF_data(audits, output_path, extracted_path)
-
+  
   # Create audit metadata
   audit_metadata = create_audit_metadata(database, audits, output_path)
+
+  # Deletar arquivos baixados
+  rmtree(output_path)
 
   # Load database
   audit_metadata = load_database(database, extracted_path, audit_metadata)
