@@ -10,7 +10,3 @@ services:
     networks:
       - CNPJ_net
     restart: unless-stopped
-    schedules:
-      # For Saturday schedule:
-      - every: 1w  # Run weekly
-        dow: saturday
