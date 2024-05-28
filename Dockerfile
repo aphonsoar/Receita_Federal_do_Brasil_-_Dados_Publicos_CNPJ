@@ -2,9 +2,6 @@ FROM python:3.8-slim
 
 WORKDIR /app
 
-# Install cron
-RUN apt-get update && apt-get install -y cron
-
 # Copy your application code
 COPY . .
 
