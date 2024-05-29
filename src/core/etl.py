@@ -210,7 +210,7 @@ def get_RF_data(audits, from_folder, to_folder, is_parallel=True):
     return download_and_extract_RF_data(audits, from_folder, to_folder, is_parallel)
 
 
-def load_RF_data_ondatabase(database, from_folder, audit_metadata):
+def load_RF_data_on_database(database, from_folder, audit_metadata):
     """
     Populates the database with data from multiple tables.
 

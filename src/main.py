@@ -10,7 +10,7 @@ from setup.logging import logger
 from utils.models import  create_audits, create_audit_metadata
 
 from setup.base import get_sink_folder, init_database
-from core.etl import get_RF_data, load_RF_data_ondatabase
+from core.etl import get_RF_data, load_RF_data_on_database
 from core.scrapper import scrap_RF
 
 from utils.models import insert_audit
@@ -67,7 +67,7 @@ if audits:
   rmtree(output_path)
 
   # Load database
-  audit_metadata = load_RF_data_ondatabase(database, extracted_path, audit_metadata)
+  audit_metadata = load_RF_data_on_database(database, extracted_path, audit_metadata)
 
   # Insert audit metadata
   for audit in audit_metadata.audit_list:
