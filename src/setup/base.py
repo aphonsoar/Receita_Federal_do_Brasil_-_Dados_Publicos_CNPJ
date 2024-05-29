@@ -37,9 +37,14 @@ def get_sink_folder():
     
     return output_folder, extract_folder
 
-def setup_database(host: str, port: str, user: str, passw: str):
+def setup_database(
+    host: str, port: str, 
+    sudo_user:str, sudo_pwd: str, 
+    user: str, passw: str,
+    database_name: str
+):
     # If the database name is not provided, use a default name
-    DEFAULT_URI = f"postgresql://postgres:postgres@{host}:{port}/postgres"
+    DEFAULT_URI = f"postgresql://{sudo_user}:{sudo_pwd}@{host}:{port}/{database_name}"
     
     default_engine = create_engine(DEFAULT_URI)
 
@@ -79,20 +84,22 @@ def init_database() -> Union[Database, None]:
     
     try:
         # Get environment variables
-        user = getenv('POSTGRES_USER', 'postgres')
-        passw = getenv('POSTGRES_PASSWORD', 'postgres')
         host = getenv('POSTGRES_HOST', 'localhost')
         port = int(getenv('POSTGRES_PORT', '5432'))
+        user = getenv('POSTGRES_USER', 'postgres')
+        passw = getenv('POSTGRES_PASSWORD', 'postgres')
         database_name = getenv('POSTGRES_NAME')
+        sudo_user = getenv('POSTGRES_SUDO_USER')
+        sudo_pwd = getenv('POSTGRES_SUDO_PASSWORD')
         
-        setup_database(host, port, user, passw)
-
+        # setup_database(host, port, sudo_user, sudo_pwd, user, passw, database_name )
+        
         # Connect to the database
         db_uri = f'postgresql://{user}:{passw}@{host}:{port}/{database_name}'
 
         # Create the database engine and session maker
         timeout=5*60*60 # 5 hours
-        database_obj = create_database(db_uri, timeout=timeout)
+        database_obj = create_database(db_uri, session_timeout=timeout)
 
         # Create all tables defined using the Base class (if not already created)
         Base.metadata.create_all(database_obj.engine)

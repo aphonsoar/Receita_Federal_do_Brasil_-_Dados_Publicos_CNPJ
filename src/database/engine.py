@@ -6,16 +6,15 @@ from .schemas import Database
 
 Base = declarative_base()
 
-# Default session timeout: 30 minutes
-DEFAULT_SESSION_TIMEOUT = 30*60
+# Default session timeout: 5 hours
+DEFAULT_SESSION_TIMEOUT = 5*60*60
 
 # Create the database engine and session maker
 def create_database(uri, session_timeout: int = DEFAULT_SESSION_TIMEOUT):
     engine = create_engine(
         uri, 
         pool_pre_ping=True,
-        pool_recycle=session_timeout,
-        echo=True
+        pool_recycle=session_timeout
     )
     SessionLocal = sessionmaker(
         autocommit=False, 
