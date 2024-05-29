@@ -1,11 +1,10 @@
-from typing import NamedTuple, List, Dict, Optional
+from typing import NamedTuple, List, Dict
 from datetime import datetime
 
-from sqlalchemy.orm import sessionmaker
 from pydantic import BaseModel, Field
 from functools import reduce
 
-from .database import AuditDB
+from database.models import AuditDB
 
 class Audit(BaseModel):
   """
@@ -31,7 +30,7 @@ class Audit(BaseModel):
   audi_inserted_at: datetime
 
 
-class CNPJZipFile(BaseModel):
+class FileInfo(BaseModel):
   """
   Pydantic model representing a CNPJ file.
 
@@ -41,37 +40,23 @@ class CNPJZipFile(BaseModel):
   """
   filename: str
   updated_at: datetime
-  
-class ZipContent(BaseModel):
-  """
-  Pydantic model representing a CNPJ file.
-
-  Attributes:
-    filename (str): The name of the CNPJ file.
-    updated_at (datetime): The date and time when the CNPJ file was last updated.
-  """
-  filename: str
-  zip_filename: str
-  file_size: int
+  file_size: int = 0
 
 class AuditMetadata(BaseModel):
-    audit_list: List
-    tablename_to_zipfile_to_files: Dict
-    
-    def __repr__(self) -> str:
-        args=f'audit_list={self.audit_list}, tablename_to_zipfile_to_files={self.tablename_to_zipfile_to_files}'
-        return f"AuditMetadata({args})"
-    
-class Database(NamedTuple):
   """
-  This class represents a database connection and session management object.
-  It contains two attributes:
+  Represents the metadata for auditing purposes.
+
+  Attributes:
+    audit_list (List): A list of audit items.
+    tablename_to_zipfile_to_files (Dict): A dictionary mapping table names to zip files and their associated files.
+  """
+
+  audit_list: List
+  tablename_to_zipfile_to_files: Dict
   
-  - engine: A callable that represents the database engine.
-  - session_maker: A callable that represents the session maker.
-  """
-  engine: callable
-  session_maker: callable
+  def __repr__(self) -> str:
+    args=f'audit_list={self.audit_list}, tablename_to_zipfile_to_files={self.tablename_to_zipfile_to_files}'
+    return f"AuditMetadata({args})"
 
 class TableInfo(NamedTuple):
     """Represents information about a table.

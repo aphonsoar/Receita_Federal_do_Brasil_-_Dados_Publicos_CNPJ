@@ -3,12 +3,12 @@ from dotenv import load_dotenv
 from typing import Union
 from sqlalchemy import create_engine
 from psycopg2 import OperationalError
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
 
 from setup.logging import logger
-from models.pydantic import Database
 from utils.misc import makedir 
+from database.engine import Base
+from database.schemas import Database
+from database.engine import create_database
 
 def get_sink_folder():
     """
@@ -37,7 +37,35 @@ def get_sink_folder():
     
     return output_folder, extract_folder
 
-def setup_database() -> Union[Database, None]:
+def setup_database(host: str, port: str, user: str, passw: str):
+    # If the database name is not provided, use a default name
+    DEFAULT_URI = f"postgresql://postgres:postgres@{host}:{port}/postgres"
+    
+    default_engine = create_engine(DEFAULT_URI)
+
+    try:
+        # Create database
+        with default_engine.connect() as conn:
+            # For PostgreSQL, a new database cannot be created within a transaction block
+            descrip='Base de dados para gravar os dados públicos de CNPJ da Receita Federal do Brasil'
+
+            conn.execute("commit")
+            conn.execute('''CREATE DATABASE "Dados_RFB"
+                            WITH OWNER = postgres
+                            ENCODING = 'UTF8'
+                            CONNECTION LIMIT = -1;''')
+            
+            conn.execute(f'''COMMENT ON DATABASE "Dados_RFB"
+                            IS {descrip};''')
+            
+            conn.execute(f"CREATE USER {user} WITH PASSWORD '{passw}';")
+            conn.execute(f"GRANT pg_read_all_data TO {user};")
+            conn.execute(f"GRANT pg_write_all_data TO {user};")
+    
+    except OperationalError as e:
+        logger.error(f"Error creating database: {e}")
+
+def init_database() -> Union[Database, None]:
     """
     Connects to a PostgreSQL database using environment variables for connection details.
 
@@ -54,24 +82,25 @@ def setup_database() -> Union[Database, None]:
         user = getenv('POSTGRES_USER', 'postgres')
         passw = getenv('POSTGRES_PASSWORD', 'postgres')
         host = getenv('POSTGRES_HOST', 'localhost')
-        port = getenv('POSTGRES_PORT', '5432')
+        port = int(getenv('POSTGRES_PORT', '5432'))
         database_name = getenv('POSTGRES_NAME')
         
+        setup_database(host, port, user, passw)
+
         # Connect to the database
         db_uri = f'postgresql://{user}:{passw}@{host}:{port}/{database_name}'
-        
-        engine = create_engine(db_uri)
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-        
+
+        # Create the database engine and session maker
+        timeout=5*60*60 # 5 hours
+        database_obj = create_database(db_uri, timeout=timeout)
+
         # Create all tables defined using the Base class (if not already created)
-        Base = declarative_base()
-        Base.metadata.create_all(engine)
+        Base.metadata.create_all(database_obj.engine)
         
         logger.info('Connection to the database established!')
-        return Database(engine=engine, session_maker=SessionLocal)
+        return database_obj
     
     except OperationalError as e:
-        summary = "Error connecting to database"
-        logger.error(f"{summary}: {e}")
+        logger.error(f"Error connecting to database: {e}")
         return None
 

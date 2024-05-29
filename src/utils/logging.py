@@ -1,4 +1,3 @@
-import os
 from os import remove, scandir, path
 from shutil import rmtree
 

@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from os import path
 
-from models.database import AuditDB
+from database.models import AuditDB
 from core.constants import DADOS_RF_URL, LAYOUT_URL
 
 from utils.misc import extract_zip_file, get_file_size
@@ -47,24 +47,32 @@ def download_and_extract_files(
 
         else:
             download(url, out=download_path, bar=None)
-            
+
+    except OSError as e:
+        summary=f"Error downloading {url}"
+        message=f"{summary}: {e}"
+        logger.error(message)
+        
+        return None
+    
+    finally:
         # Update audit metadata
         audit.audi_downloaded_at = datetime.now()
         audit.audi_file_size_bytes = get_file_size(full_path)
-        
+
+    try:
         # Assuming extraction updates progress bar itself
         extract_zip_file(full_path, extracted_path)
         audit.audi_processed_at = datetime.now()
         
         return audit
-
+    
     except OSError as e:
-        summary=f"Error downloading {url} or extracting file {file_name}"
+        summary=f"Extracting file {file_name}"
         message=f"{summary}: {e}"
         logger.error(message)
         
-        return None
-
+        
 def get_rf_filenames_parallel(
     audits: list,
     output_path: str, 
@@ -151,11 +159,12 @@ def get_rf_filenames_serial(
         
         logger.info(f"({index}/{total_count}) arquivos baixados. {error_count} erros: {error_basefiles}")
 
-# @timer('Baixar e extrair arquivos da Receita Federal')
+
 def download_and_extract_RF_data(
     audits: list, 
     output_path: str, 
-    extracted_path: str
+    extracted_path: str,
+    is_parallel=True,
 ):
     """
     Downloads files from the Receita Federal base URLs to the specified output path and extracts them.
@@ -173,7 +182,7 @@ def download_and_extract_RF_data(
     max_workers = get_max_workers()
     
     # Check if parallel processing is enabled
-    is_parallel = max_workers > 1
+    is_parallel = max_workers > 1 or is_parallel
     
     # Download RF files
     if(is_parallel):
@@ -188,8 +197,7 @@ def download_and_extract_RF_data(
     
     return audits
 
-# @timer('Buscar dados da Receita Federal')
-def get_RF_data(audits, from_folder, to_folder):
+def get_RF_data(audits, from_folder, to_folder, is_parallel=True):
     """
     Retrieves and extracts the data from the Receita Federal.
 
@@ -199,12 +207,10 @@ def get_RF_data(audits, from_folder, to_folder):
         is_parallel (bool, optional): Whether to download and extract the files in parallel. Defaults to True.
     """
     # Extrair nomes dos arquivos
-    audits = download_and_extract_RF_data(audits, from_folder, to_folder)
-    
-    return audits
+    return download_and_extract_RF_data(audits, from_folder, to_folder, is_parallel)
 
-# @timer(ident='Popular banco')
-def load_database(database, from_folder, audit_metadata):
+
+def load_RF_data_ondatabase(database, from_folder, audit_metadata):
     """
     Populates the database with data from multiple tables.
 
@@ -218,13 +224,6 @@ def load_database(database, from_folder, audit_metadata):
     """
     table_to_filenames = audit_metadata.tablename_to_zipfile_to_files
     zip_filenames = [ audit.audi_filename for audit in audit_metadata.audit_list ]
-    
-    zipfiles = sum(
-        [
-            list(zipfile_file_dict.keys())
-            for zipfile_file_dict in audit_metadata.tablename_to_zipfile_to_files.values()
-        ], []
-    )
     
     table_to_zip_dict = {
         tablename: zip_to_files.keys()

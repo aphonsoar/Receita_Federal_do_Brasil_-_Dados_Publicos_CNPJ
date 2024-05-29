@@ -5,7 +5,7 @@ from datetime import datetime
 
 from setup.logging import logger
 from core.constants import DADOS_RF_URL 
-from models.pydantic import CNPJZipFile
+from core.schemas import FileInfo
 
 def scrap_RF():
     """
@@ -49,9 +49,8 @@ def scrap_RF():
                 except ValueError:
                     # Handle cases where date format doesn't match
                     logger.error(f"Error parsing date for file: {filename}")
-                    updated_at_str = ''
 
-                file_info = CNPJZipFile(filename=filename, updated_at=updated_at)
+                file_info = FileInfo(filename=filename, updated_at=updated_at)
                 files_info.append(file_info)
             
     return files_info

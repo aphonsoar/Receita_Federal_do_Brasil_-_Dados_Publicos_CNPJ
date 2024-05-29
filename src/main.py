@@ -9,8 +9,8 @@ from setup.logging import logger
 
 from utils.models import  create_audits, create_audit_metadata
 
-from core.base import get_sink_folder, setup_database
-from core.etl import get_RF_data, load_database
+from setup.base import get_sink_folder, init_database
+from core.etl import get_RF_data, load_RF_data_ondatabase
 from core.scrapper import scrap_RF
 
 from utils.models import insert_audit
@@ -37,21 +37,28 @@ from utils.models import insert_audit
 
 # Folders and database setup
 output_path, extracted_path = get_sink_folder()
-database = setup_database()
+database = init_database()
 
 # Get files info
 files_info = scrap_RF()
 
 # NOTE: Test purposes only
 if getenv('ENVIRONMENT', 'development') == 'development':
-  files_info = [ files_info[0], files_info[21] ]
+  files_info = [ 
+    files_info[0], 
+    files_info[21],
+    files_info[22],
+    files_info[23],
+    files_info[24]  
+  ]
 
 # Create audits
 audits = create_audits(database, files_info)
 
 if audits:
   # Retrieve data
-  audits = get_RF_data(audits, output_path, extracted_path)
+  is_parallel = False
+  audits = get_RF_data(audits, output_path, extracted_path, is_parallel)
   
   # Create audit metadata
   audit_metadata = create_audit_metadata(database, audits, output_path)
@@ -60,7 +67,7 @@ if audits:
   rmtree(output_path)
 
   # Load database
-  audit_metadata = load_database(database, extracted_path, audit_metadata)
+  audit_metadata = load_RF_data_ondatabase(database, extracted_path, audit_metadata)
 
   # Insert audit metadata
   for audit in audit_metadata.audit_list:

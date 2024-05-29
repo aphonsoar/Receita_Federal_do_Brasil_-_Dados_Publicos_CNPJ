@@ -1,14 +1,13 @@
-from timy import timer
 from os import path
 import pandas as pd
 from sqlalchemy import text
 
 from utils.dataframe import to_sql
 from utils.misc import delete_var, update_progress, get_line_count
-from core.constants import (
-    TABLES_INFO_DICT, CHUNK_SIZE
-)
-from models.pydantic import Database, TableInfo
+from core.constants import TABLES_INFO_DICT, CHUNK_SIZE
+
+from core.schemas import TableInfo
+from database.schemas import Database
 from setup.logging import logger
 
 ##########################################################################
@@ -85,7 +84,6 @@ def populate_table_with_filename(
 
     delete_var(df)
 
-# @timer('Popular tabela')
 def populate_table_with_filenames(
     database: Database, 
     table_info: TableInfo, 
@@ -157,7 +155,7 @@ def populate_table(
     table_info = TableInfo(label, table_name, columns, encoding, transform_map)
     populate_table_with_filenames(database, table_info, from_folder, table_files)
 
-@timer('Criar indices do banco')
+
 def generate_tables_indices(engine, tables):
     """
     Generates indices for the database tables.

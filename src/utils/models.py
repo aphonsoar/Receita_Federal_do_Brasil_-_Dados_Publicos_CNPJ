@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import Union, List
-from os import getcwd, path, listdir
-from functools import reduce 
+from os import path
 from uuid import uuid4
 
-from sqlalchemy import or_, func
+from sqlalchemy import func
 
-from models.pydantic import Database, AuditMetadata 
-from models.database import AuditDB
+from core.schemas import AuditMetadata 
+from database.engine import Database 
+from database.models import AuditDB
 from setup.logging import logger 
 from utils.misc import list_zip_contents, invert_dict_list
 from utils.etl import get_zip_to_tablename
@@ -148,8 +148,6 @@ def create_audit_metadata(
     }
 
     # Arquivos
-    zip_files = [ audit.audi_filename for audit in audits ]
-    
     zipfiles_to_tablenames = get_zip_to_tablename(zip_file_dict)
     tablename_to_zipfile_dict = invert_dict_list(zipfiles_to_tablenames)
 

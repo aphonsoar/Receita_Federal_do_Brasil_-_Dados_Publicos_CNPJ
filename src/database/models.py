@@ -1,15 +1,14 @@
 from sqlalchemy import (
-  Column, Integer, String, TIMESTAMP, create_engine
+  Column, Integer, String, TIMESTAMP,
 )
-from typing import NamedTuple, List, Optional, Generic, TypeVar
+from sqlalchemy.dialects.postgresql import UUID
+from typing import Optional, Generic, TypeVar
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.declarative import declarative_base
 from datetime import datetime
 
 from functools import reduce
 
-# Define the base class for table models
-Base = declarative_base()
+from database.engine import Base
 
 T = TypeVar('T')
 
@@ -38,9 +37,9 @@ class AuditDB(Base):
     """
     __tablename__ = 'audit'
 
-    audi_id = Column(Integer, primary_key=True)
+    audi_id = Column(UUID(as_uuid=True), primary_key=True)
     audi_filename = Column(String(255), nullable=False)
-    audi_file_size_bytes = Column(Integer, nullable=False)
+    audi_file_size_bytes = Column(Integer, nullable=True)
     audi_source_updated_at = Column(TIMESTAMP, nullable=True)
     audi_created_at = Column(TIMESTAMP, nullable=True)
     audi_downloaded_at = Column(TIMESTAMP, nullable=True)

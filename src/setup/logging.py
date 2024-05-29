@@ -4,29 +4,38 @@ import sys
 from datetime import datetime
 from dotenv import load_dotenv
 from os import getenv, makedirs, path
+from pythonjsonlogger import jsonlogger
 
 from utils.logging import clear_latest_items
+
+# Use the logger
+logger = logging.getLogger(__name__)
 
 # Configure logging with a single handler
 # Set the overall logging level
 load_dotenv()
 ENVIRONMENT = getenv('ENVIRONMENT', 'development')
 
+logging_format="%(name)s %(asctime)s %(levelname)s %(filename)s %(lineno)s %(process)d %(message)s"
+fmt = jsonlogger.JsonFormatter(logging_format)
+
 if ENVIRONMENT == 'development':
+    # Create a handler for stdout and stderr
+    stdout_stream_handler=logging.StreamHandler(sys.stdout)
+    stderr_stream_handler=logging.StreamHandler(sys.stderr)
+
+    # Set the format for the handlers
+    stdout_stream_handler.setFormatter(fmt)
+    stderr_stream_handler.setFormatter(fmt)
+
     logging.basicConfig(
-        level=logging.INFO,  
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-        ]
+        level=logging.INFO,
+        handlers=[stdout_stream_handler]
     )
     
     logging.basicConfig(
         level=logging.WARN,  
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        handlers=[
-            logging.StreamHandler(sys.stderr),
-        ]
+        handlers=[stderr_stream_handler]
     )
 
 # Create separate log files for errors and info
@@ -51,21 +60,18 @@ info_path = path.dirname(info_file)
 makedirs(info_path, exist_ok=True)
 makedirs(error_path, exist_ok=True)
 
-error_handler = logging.FileHandler(error_file, mode="a")
-error_handler.setLevel(logging.ERROR)  # Only log errors to this file
+log_infos = [
+    (error_file, logging.ERROR),
+    (info_file, logging.INFO),
+    (info_file, logging.WARN),
+]
 
-info_handler = logging.FileHandler(info_file, mode="a")
-info_handler.setLevel(logging.INFO)  # log INFO and above to this file
+for log_file, log_level in log_infos:
+    log_handler = logging.FileHandler(log_file, mode="a")
+    log_handler.setFormatter(fmt)
+    log_handler.setLevel(log_level)  # Only log errors to this file
 
-warn_handler = logging.FileHandler(info_file, mode="a")
-warn_handler.setLevel(logging.WARN)  # Only log INFO and above to this file
-
-logging.getLogger().addHandler(error_handler)
-logging.getLogger().addHandler(info_handler)
-logging.getLogger().addHandler(warn_handler)
-
-# Use the logger
-logger = logging.getLogger(__name__)
+    logger.addHandler(log_handler)
 
 logger.info("Logging started.")
 

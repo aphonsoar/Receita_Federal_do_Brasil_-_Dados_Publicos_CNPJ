@@ -36,7 +36,6 @@ def to_sql(dataframe: pd.DataFrame, **kwargs):
     Raises:
         Exception: If there is an error inserting the records into the table.
     '''
-    total = len(dataframe)
     
     # Query arguments
     tablename = kwargs.get('tablename')
@@ -44,7 +43,6 @@ def to_sql(dataframe: pd.DataFrame, **kwargs):
     if_exists = kwargs.get('if_exists')
     conn = kwargs.get('conn')
     index = kwargs.get('index')
-    verbose = kwargs.get('verbose')
 
     # Query arguments
     query_args = {
