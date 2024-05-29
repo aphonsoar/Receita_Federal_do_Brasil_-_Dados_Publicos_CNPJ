@@ -1,14 +1,29 @@
 version: "3.8"
 
-networks:
-  CNPJ_net:
-
 services:
   crawler:
     build: 
       context: .
       dockerfile: Dockerfile
-    command: ["python3", "src/main.py"]
     networks:
       - CNPJ_net
     restart: unless-stopped
+
+  crawler-db:
+    image: postgres:14
+    restart: always
+    env_file: .env
+    networks:
+      - CNPJ_net
+    expose:
+      - "$POSTGRES_PORT"
+    ports:
+      - "$POSTGRES_PORT:$POSTGRES_PORT"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+networks:
+  CNPJ_net:
+
+volumes:
+  postgres_data:

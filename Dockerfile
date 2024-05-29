@@ -5,6 +5,12 @@ WORKDIR /app
 # Copy your application code
 COPY . .
 
+# Create the log directory
+RUN mkdir -p /app/logs
+
+# Install the required packages
+RUN apt-get update && apt-get -y install cron
+
 # Copy the crontab file to the cron.d directory
 COPY cron-config /etc/cron.d/cron-config
 
@@ -18,4 +24,4 @@ RUN crontab /etc/cron.d/cron-config
 RUN touch /var/log/cron.log
 
 # Run the command on container startup
-CMD cron && tail -f /var/log/cron.log
+CMD cron
