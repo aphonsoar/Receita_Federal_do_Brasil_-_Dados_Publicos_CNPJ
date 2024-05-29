@@ -28,7 +28,7 @@ clean-test: # Remove test and coverage artifacts
 clean-cache: # remove test and coverage artifacts
 	find . -name '*cache*' -exec rm -rf {} +
 
-clean: clean-logs clean-test clean-cache sanitize ## Add a rule to remove unnecessary assets. Usage: make clean
+clean: clean-logs clean-test clean-cache ## Add a rule to remove unnecessary assets. Usage: make clean
 
 env: ## Creates a virtual environment. Usage: make env
 	pip install virtualenv

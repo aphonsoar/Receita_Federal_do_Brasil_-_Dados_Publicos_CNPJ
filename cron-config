@@ -1,1 +1,0 @@
-* * * * * python3 /app/src/main.py >> /app/logs/cron.log 2>&1
