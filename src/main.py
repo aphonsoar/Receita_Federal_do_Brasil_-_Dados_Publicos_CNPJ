@@ -6,14 +6,15 @@ from os import getenv
 from shutil import rmtree
 
 from setup.logging import logger
-
-from utils.models import  create_audits, create_audit_metadata
-
 from setup.base import get_sink_folder, init_database
+from utils.models import  (
+  create_audits, 
+  create_audit_metadata, 
+  insert_audit,
+)
 from core.etl import get_RF_data, load_RF_data_on_database
 from core.scrapper import scrap_RF
 
-from utils.models import insert_audit
 
 # ############################################################################################ 
 # INFORMAÇÕES SOBRE O PROCESSO
@@ -57,13 +58,13 @@ audits = create_audits(database, files_info)
 
 if audits:
   # Retrieve data
-  is_parallel = False
+  is_parallel = True
   audits = get_RF_data(audits, output_path, extracted_path, is_parallel)
   
   # Create audit metadata
   audit_metadata = create_audit_metadata(database, audits, output_path)
 
-  # Deletar arquivos baixados
+  # Deletar arquivos zip baixados
   rmtree(output_path)
 
   # Load database

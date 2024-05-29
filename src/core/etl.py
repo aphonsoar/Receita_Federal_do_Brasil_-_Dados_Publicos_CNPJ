@@ -182,7 +182,7 @@ def download_and_extract_RF_data(
     max_workers = get_max_workers()
     
     # Check if parallel processing is enabled
-    is_parallel = max_workers > 1 or is_parallel
+    is_parallel = max_workers > 1 and is_parallel
     
     # Download RF files
     if(is_parallel):
@@ -191,7 +191,6 @@ def download_and_extract_RF_data(
         audits = get_rf_filenames_serial(audits, output_path, extracted_path)
 
     # Download layout
-    logger.info("Baixando layout...")
     download(LAYOUT_URL, out=output_path, bar=None)
     logger.info("Layout baixado com sucesso!")
     
