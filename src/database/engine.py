@@ -11,15 +11,7 @@ DEFAULT_SESSION_TIMEOUT = 5*60*60
 
 # Create the database engine and session maker
 def create_database(uri, session_timeout: int = DEFAULT_SESSION_TIMEOUT):
-    engine = create_engine(
-        uri, 
-        pool_pre_ping=True,
-        pool_recycle=session_timeout
-    )
-    SessionLocal = sessionmaker(
-        autocommit=False, 
-        autoflush=False, 
-        bind=engine
-    )
+    engine = create_engine(uri)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     return Database(engine=engine, session_maker=SessionLocal)
