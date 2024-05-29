@@ -1,1 +1,1 @@
-* * * * * echo "Hello world" >> /var/log/cron.log 2>&1
+* * * * * python3 /app/src/main.py >> /app/logs/cron.log 2>&1

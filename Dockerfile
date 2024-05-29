@@ -1,15 +1,22 @@
-FROM python:3.8-slim
+FROM python:3.9-slim-bullseye
 
 WORKDIR /app
 
 # Copy your application code
-COPY . .
+COPY src/ ./src
+COPY .env .
 
 # Create the log directory
 RUN mkdir -p /app/logs
 
 # Install the required packages
-RUN apt-get update && apt-get -y install cron
+RUN apt-get update && apt-get -y install cron python3 python3-pip virtualenv
+
+# RUN python3 -m venv /opt/venv
+
+# Install dependencies:
+COPY requirements.txt .
+RUN pip install -r requirements.txt
 
 # Copy the crontab file to the cron.d directory
 COPY cron-config /etc/cron.d/cron-config
@@ -21,7 +28,8 @@ RUN chmod 0644 /etc/cron.d/cron-config
 RUN crontab /etc/cron.d/cron-config
 
 # Create the log file to be able to run tail
-RUN touch /var/log/cron.log
+RUN touch /app/logs/cron.log
 
 # Run the command on container startup
-CMD cron
+CMD echo "starting" && echo "continuing" && (cron) \
+&& echo "tailing..." && : >> /app/logs/cron.log && tail -f /app/logs/cron.log
