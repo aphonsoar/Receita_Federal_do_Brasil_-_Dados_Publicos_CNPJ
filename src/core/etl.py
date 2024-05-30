@@ -1,257 +1,193 @@
-from wget import download 
-from tqdm import tqdm
-from shutil import rmtree
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List
+import re
+from urllib import request
+from bs4 import BeautifulSoup
 from datetime import datetime
-from os import path
+from functools import reduce
+from shutil import rmtree
 
-from database.models import AuditDB
-from core.constants import DADOS_RF_URL, LAYOUT_URL
-
-from utils.misc import extract_zip_file, get_file_size
 from setup.logging import logger
-from utils.misc import get_max_workers
-from utils.database import populate_table, generate_tables_indices
+from database.models import AuditDB
+from core.schemas import FileInfo, AuditMetadata
+from database.utils.models import (
+    create_audits, 
+    create_audit_metadata, 
+    insert_audit
+)
+from core.utils.etl import (
+    get_RF_data, 
+    load_RF_data_on_database
+)
+from utils.misc import convert_to_bytes 
 
+class CNPJ_ETL:
 
-####################################################################################################
-## LER E INSERIR DADOS #############################################################################
-####################################################################################################
-
-def download_and_extract_files(
-    audit: AuditDB, 
-    url: str, 
-    download_path: str, 
-    extracted_path: str, 
-    has_progress_bar: bool
-):
-    """
-    Downloads a file from the given URL to the specified output path and extracts it.
-
-    Args:
-        url (str): The URL of the file to download.
-        download_path (str): The path to save the downloaded file.
-        extracted_path (str): The path to the directory where the file will be extracted.
-        has_progress_bar (bool): Whether to display a progress bar during the download.
-
-    Raises:
-        OSError: If an error occurs during the download or extraction process.
-    """
-    file_name = path.basename(url)
-    full_path = path.join(download_path, file_name)
-    
-    try:
-        # Assuming download updates progress bar itself
-        if(has_progress_bar):
-            download(url, out=download_path)
-
-        else:
-            download(url, out=download_path, bar=None)
-
-    except OSError as e:
-        summary=f"Error downloading {url}"
-        message=f"{summary}: {e}"
-        logger.error(message)
+    def __init__(
+        self, database, data_url, layout_url,
+        download_folder, extract_folder,
+        is_parallel=True, delete_zips=True
+    ) -> None:
+        self.database = database
+        self.data_url = data_url
+        self.layout_url = layout_url
+        self.download_folder = download_folder
+        self.extract_folder = extract_folder
+        self.is_parallel = is_parallel
+        self.delete_zips = delete_zips
         
-        return None
-    
-    finally:
-        # Update audit metadata
-        audit.audi_downloaded_at = datetime.now()
-        audit.audi_file_size_bytes = get_file_size(full_path)
+    def scrap(self):
+        """
+        Scrapes the RF (Receita Federal) website to extract file information.
 
-    try:
-        # Assuming extraction updates progress bar itself
-        extract_zip_file(full_path, extracted_path)
-        audit.audi_processed_at = datetime.now()
-        
-        return audit
-    
-    except OSError as e:
-        summary=f"Extracting file {file_name}"
-        message=f"{summary}: {e}"
-        logger.error(message)
-        
-        
-def get_rf_filenames_parallel(
-    audits: list,
-    output_path: str, 
-    extracted_path: str,
-    max_workers = get_max_workers()
-):
-    """
-    Downloads and extracts the files from the Receita Federal base URLs in parallel.
+        Returns:
+            list: A list of tuples containing the updated date and filename of the files found on the RF website.
+        """
+        raw_html = request.urlopen(self.data_url)
+        raw_html = raw_html.read()
 
-    Args:
-        base_files (list): A list of base file names to be downloaded.
-        output_path (str): The path to save the downloaded files.
-        extracted_path (str): The path to the directory where the files will be extracted.
-        max_workers (int, optional): The maximum number of concurrent downloads. Defaults to get_max_workers().
-    """
-    
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Formatar página e converter em string
+        page_items = BeautifulSoup(raw_html, 'lxml')
+
+        # Find all table rows
+        table_rows = page_items.find_all('tr')
         
-        futures = [
-            executor.submit(
-                download_and_extract_files, 
-                audit,
-                DADOS_RF_URL + audit.audi_filename, 
-                output_path, 
-                extracted_path,
-                False
+        # Extract data from each row
+        files_info = []
+        for row in table_rows:
+            # Find cells containing filename (anchor tag) and date
+            filename_cell = row.find('a')
+            regex_pattern=r'\d{4}-\d{2}-\d{2}'
+            collect_date=lambda text: text and re.search(regex_pattern, text)
+            date_cell = row.find('td', text=collect_date)
+            
+            size_types=['K', 'M', 'G']
+            or_map = lambda a, b: a or b
+            is_size_type = lambda text: reduce(
+                or_map, 
+                [text.endswith(size_type) for size_type in size_types]
             )
-            for audit in audits
-        ]
+            size_cell = row.find('td', text=lambda text: text and is_size_type(text))
+            
+            has_data = filename_cell and date_cell and size_cell
+            if has_data:
+                filename = filename_cell.text.strip()
 
-        results = []
-        for future in tqdm(as_completed(futures), total=len(audits)):
-            try:
-                result = future.result()
-                results.append(result)
-            except Exception as e:
-                summary="An error occurred on parallelization"
-                logger.error(f"{summary}: {e}")
-        
-        return results
+                if filename.lower().endswith('.zip'):
+                    date_text = date_cell.text.strip()
 
-def get_rf_filenames_serial(
-    audits: list,
-    output_path: str, 
-    extracted_path: str, 
-):
-    """
-    Downloads and extracts the files from the Receita Federal base URLs serially.
+                    # Try converting date text to datetime object (adjust format if needed)
+                    try:
+                        updated_at = datetime.strptime(date_text, "%Y-%m-%d %H:%M")
+                        updated_at = updated_at.replace(hour=0, minute=0, second=0, microsecond=0)
+                    
+                    except ValueError:
+                        # Handle cases where date format doesn't match
+                        logger.error(f"Error parsing date for file: {filename}")
 
-    Args:
-        base_files (list): A list of base file names to be downloaded.
-        output_path (str): The path to save the downloaded files.
-        extracted_path (str): The path to the directory where the files will be extracted.
-    """
-    counter = 0
-    error_count = 0
-    error_basefiles = []
-    total_count = len(audits)
-    audits_ = []
+                    size_value_str = size_cell.text.strip()
+                    
+                    file_info = FileInfo(
+                        filename=filename, 
+                        updated_at=updated_at,
+                        file_size=convert_to_bytes(size_value_str)
+                    )
+                    files_info.append(file_info)
+                
+        return files_info
     
-    for index, audit in enumerate(audits):
+    def get_data(self, audits: List[AuditDB]):
+        """
+        Downloads the files from the RF (Receita Federal) website.
+
+        Returns:
+            None
+        """
+        # Delete extract folder content
         try:
-            # Download and extract file
-            audit_ = download_and_extract_files(
-                audit,
-                DADOS_RF_URL + audit.audi_filename, 
-                output_path, 
-                extracted_path, 
-                True
+            rmtree(self.extract_folder)
+        except Exception as e:
+            logger.error(f"Error deleting extract folder: {e}")
+
+        # Get data
+        if audits:
+            get_RF_data(
+                self.data_url, 
+                self.layout_url, 
+                audits, 
+                self.download_folder, 
+                self.extract_folder, 
+                self.is_parallel
             )
-            
-            audits_.append(audit_)
-            
-            # Update progress bar after download (success or failure)
-            counter = counter + 1
-            logger.info('\n')
 
-        except OSError as e:
-            summary = f"Erro ao baixar ou extrair arquivo {audit.audi_filename}"
-            message = f"{summary}: {e}"
-            logger.error(message)
-            error_count += 1
-            error_basefiles.append(audit.audi_filename)
-        
-        logger.info(f"({index}/{total_count}) arquivos baixados. {error_count} erros: {error_basefiles}")
+            # Create audit metadata
+            audit_metadata = create_audit_metadata(audits, self.download_folder)
 
+            return audit_metadata
 
-def download_and_extract_RF_data(
-    audits: list, 
-    output_path: str, 
-    extracted_path: str,
-    is_parallel=True,
-):
-    """
-    Downloads files from the Receita Federal base URLs to the specified output path and extracts them.
+        # Deletar arquivos zip baixados
+        if self.delete_zips:
+            try:
+                rmtree(self.download_folder)
+            except Exception as e:
+                logger.error(f"Error deleting download folder: {e}")
 
-    Args:
-        base_files (list): A list of base file names to be downloaded.
-        output_path (str): The path to save the downloaded files.
-        extracted_path (str): The path to the directory where the files will be extracted.
-        is_parallel (bool, optional): Whether to download and extract the files in parallel. Defaults to True.
-        max_workers (int, optional): The maximum number of concurrent downloads. Defaults to get_max_workers().
+    def retrieve_data(self):
+        """
+        Retrieves the data from the database.
 
-    Raises:
-        OSError: If an error occurs during the download or extraction process.
-    """
-    max_workers = get_max_workers()
-    
-    # Check if parallel processing is enabled
-    is_parallel = max_workers > 1 and is_parallel
-    
-    # Download RF files
-    if(is_parallel):
-        audits = get_rf_filenames_parallel(audits, output_path, extracted_path, max_workers)
-    else:
-        audits = get_rf_filenames_serial(audits, output_path, extracted_path)
+        Returns:
+            None
+        """
+        # Scrap data
+        files_info = self.scrap()
 
-    # Download layout
-    download(LAYOUT_URL, out=output_path, bar=None)
-    logger.info("Layout baixado com sucesso!")
-    
-    return audits
+        # Create audits
+        audits = create_audits(self.database, files_info)
 
-def get_RF_data(audits, from_folder, to_folder, is_parallel=True):
-    """
-    Retrieves and extracts the data from the Receita Federal.
+        # Test purpose only
+        from os import getenv
+        if getenv("ENVIRONMENT") == "development": 
+            audits = list(
+                filter(
+                    lambda x: x.audi_file_size_bytes < 5000, 
+                    sorted(audits, key=lambda x: x.audi_file_size_bytes)
+                )
+            )
 
-    Args:
-        to_folder (str): The path to the directory where the downloaded files will be saved.
-        from_folder (str): The path to the directory where the extracted files will be stored.
-        is_parallel (bool, optional): Whether to download and extract the files in parallel. Defaults to True.
-    """
-    # Extrair nomes dos arquivos
-    return download_and_extract_RF_data(audits, from_folder, to_folder, is_parallel)
+        if audits:
+            # Get data
+            return self.get_data(audits)
+        else:
+            None
+
+    def load_data(self, audit_metadata: AuditMetadata):
+        """
+        Loads the data into the database.
+
+        Returns:
+            None
+        """
+        # Load database
+        audit_metadata = load_RF_data_on_database(
+            self.database, self.extract_folder, audit_metadata
+        )
+
+        # Insert audit metadata
+        for audit in audit_metadata.audit_list:
+            insert_audit(self.database, audit)
 
 
-def load_RF_data_on_database(database, from_folder, audit_metadata):
-    """
-    Populates the database with data from multiple tables.
+    def run(self):
+        """
+        Runs the ETL process.
 
-    Args:
-        database (Database): The database object.
-        from_folder (str): The folder path where the files are located.
-        files (dict): A dictionary containing the file names for each table.
+        Returns:
+            None
+        """
+        audit_metadata = self.retrieve_data()
 
-    Returns:
-        None
-    """
-    table_to_filenames = audit_metadata.tablename_to_zipfile_to_files
-    zip_filenames = [ audit.audi_filename for audit in audit_metadata.audit_list ]
-    
-    table_to_zip_dict = {
-        tablename: zip_to_files.keys()
-        for tablename, zip_to_files in audit_metadata.tablename_to_zipfile_to_files.items()
-    }
-    
-    zip_tablenames_set = set(table_to_filenames.keys())
-
-    for table_name, zipfile_content_dict in table_to_filenames.items():
-        table_files_list = list(zipfile_content_dict.values())
-        
-        table_filenames = sum(table_files_list, [])
-        
-        # Populate this table
-        populate_table(database, table_name, from_folder, table_filenames)
-        
-        table_zipfiles = table_to_zip_dict[table_name]
-        for index, audit in enumerate(audit_metadata.audit_list):
-            if audit.audi_filename in table_zipfiles:
-                audit_metadata.audit_list[index].audi_inserted_at = datetime.now()
-
-    logger.info(f"Carga dos arquivos zip {zip_filenames} finalizado!")
-
-    # Generate tables indices
-    tables_with_indices = {'empresa', 'estabelecimento', 'socios', 'simples'}
-    tables_renew_indices = list(zip_tablenames_set.intersection(tables_with_indices))
-
-    has_new_tables = len(tables_renew_indices) != 0
-    if(has_new_tables):
-        generate_tables_indices(database.engine, tables_renew_indices)
-
-    return audit_metadata
+        if audit_metadata:
+            # Load data
+            self.load_data(audit_metadata)
+        else: 
+            logger.warn("No data to load!")
