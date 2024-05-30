@@ -12,6 +12,7 @@ services:
       - "$POSTGRES_PORT"
     ports:
       - "$POSTGRES_PORT:$POSTGRES_PORT"
+    command: postgres -c listen_addresses='*' -p $POSTGRES_PORT
     volumes:
       - ./data:/var/lib/postgresql/data_ 
 
@@ -25,10 +26,14 @@ services:
     networks:
       - CNPJ_net
     restart: unless-stopped
-
+    volumes:
+      - ./alembic/versions:/app/alembic/versions:ro
+      - .:/app  # Mount your project directory
+    command: bash -c "cd app && alembic upgrade head"  # Upgrade database schema on startup
 
 networks:
   CNPJ_net:
 
 volumes:
   postgres_data:
+  
