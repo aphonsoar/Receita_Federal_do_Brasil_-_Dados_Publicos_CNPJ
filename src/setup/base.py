@@ -1,14 +1,14 @@
 from os import getenv, path, getcwd
 from dotenv import load_dotenv  
 from typing import Union
-from sqlalchemy import create_engine
 from psycopg2 import OperationalError
 
 from setup.logging import logger
 from utils.misc import makedir 
-from database.engine import Base
+from database.models import Base
 from database.schemas import Database
 from database.engine import create_database
+from utils.docker import get_postgres_host
 
 def get_sink_folder():
     """
@@ -21,11 +21,11 @@ def get_sink_folder():
     load_dotenv(env_path)
     
     root_path = path.join(getcwd(), 'data') 
-    default_output_file_path = path.join(root_path, 'OUTPUT_FILES')
+    default_output_file_path = path.join(root_path, 'DOWNLOAD_FILES')
     default_input_file_path = path.join(root_path, 'EXTRACTED_FILES')
     
     # Read details from ".env" file:
-    output_route = getenv('OUTPUT_PATH', default_output_file_path)
+    output_route = getenv('DOWNLOAD_PATH', default_output_file_path)
     extract_route = getenv('EXTRACT_PATH', default_input_file_path)
     
     # Create the output and extracted folders if they do not exist
@@ -36,39 +36,6 @@ def get_sink_folder():
     makedir(extract_folder)
     
     return output_folder, extract_folder
-
-def setup_database(
-    host: str, port: str, 
-    sudo_user:str, sudo_pwd: str, 
-    user: str, passw: str,
-    database_name: str
-):
-    # If the database name is not provided, use a default name
-    DEFAULT_URI = f"postgresql://{sudo_user}:{sudo_pwd}@{host}:{port}/{database_name}"
-    
-    default_engine = create_engine(DEFAULT_URI)
-
-    try:
-        # Create database
-        with default_engine.connect() as conn:
-            # For PostgreSQL, a new database cannot be created within a transaction block
-            descrip='Base de dados para gravar os dados públicos de CNPJ da Receita Federal do Brasil'
-
-            conn.execute("commit")
-            conn.execute('''CREATE DATABASE "Dados_RFB"
-                            WITH OWNER = postgres
-                            ENCODING = 'UTF8'
-                            CONNECTION LIMIT = -1;''')
-            
-            conn.execute(f'''COMMENT ON DATABASE "Dados_RFB"
-                            IS {descrip};''')
-            
-            conn.execute(f"CREATE USER {user} WITH PASSWORD '{passw}';")
-            conn.execute(f"GRANT pg_read_all_data TO {user};")
-            conn.execute(f"GRANT pg_write_all_data TO {user};")
-    
-    except OperationalError as e:
-        logger.error(f"Error creating database: {e}")
 
 def init_database() -> Union[Database, None]:
     """
@@ -82,15 +49,18 @@ def init_database() -> Union[Database, None]:
     env_path = path.join(getcwd(), '.env')
     load_dotenv(env_path)
     
+    # Get the host based on the environment
+    if getenv('ENVIRONMENT') == 'docker':
+        host = get_postgres_host()
+    else: 
+        host = getenv('POSTGRES_HOST', 'localhost')
+
     try:
         # Get environment variables
-        host = getenv('POSTGRES_HOST', 'localhost')
         port = int(getenv('POSTGRES_PORT', '5432'))
         user = getenv('POSTGRES_USER', 'postgres')
         passw = getenv('POSTGRES_PASSWORD', 'postgres')
         database_name = getenv('POSTGRES_NAME')
-        sudo_user = getenv('POSTGRES_SUDO_USER')
-        sudo_pwd = getenv('POSTGRES_SUDO_PASSWORD')
         
         # setup_database(host, port, sudo_user, sudo_pwd, user, passw, database_name )
         
