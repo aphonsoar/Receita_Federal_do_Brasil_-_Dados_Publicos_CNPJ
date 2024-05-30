@@ -1,10 +1,7 @@
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
 from .schemas import Database
-
-Base = declarative_base()
 
 # Default session timeout: 5 hours
 DEFAULT_SESSION_TIMEOUT = 5*60*60

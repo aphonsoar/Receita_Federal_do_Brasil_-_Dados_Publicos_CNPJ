@@ -1,10 +1,10 @@
 from typing import NamedTuple, List, Dict
 from datetime import datetime
+from typing import Tuple
 
-from pydantic import BaseModel, Field
-from functools import reduce
+from pydantic import BaseModel
 
-from database.models import AuditDB
+from utils.misc import normalize_filename
 
 class Audit(BaseModel):
   """
@@ -42,6 +42,32 @@ class FileInfo(BaseModel):
   updated_at: datetime
   file_size: int = 0
 
+
+class FileGroupInfo(BaseModel):
+  """
+  Pydantic model representing a group of CNPJ files.
+
+  Attributes:
+    normalized_name (str): The normalized name of the CNPJ file.
+    original_names (List[str]): The list of original names of the CNPJ files.
+    date_range (Tuple[datetime, datetime]): The date range of the CNPJ files.
+  """
+  name: str
+  elements: List[str]
+  date_range: Tuple[datetime, datetime]
+  table_name: str
+
+  def date_diff(self) -> float:
+    """
+    Returns the difference in days between the start and end dates of the group.
+
+    Returns:
+      float: The difference in days between the start and end dates of the group.
+    """
+    start, end = self.date_range
+    return (end - start).days
+  
+
 class AuditMetadata(BaseModel):
   """
   Represents the metadata for auditing purposes.
@@ -61,23 +87,32 @@ class AuditMetadata(BaseModel):
 class TableInfo(NamedTuple):
     """Represents information about a table.
 
-    Args:
-      label (str): The label of the table.
-      table_name (str): The name of the table.
-      columns (List[str]): The list of column names in the table.
-      encoding (str): The encoding used for the table.
-      transform_map (callable): A callable object used to transform the table.
-
     Attributes:
       label (str): The label of the table.
+      group (str): The zip group of the table.
       table_name (str): The name of the table.
       columns (List[str]): The list of column names in the table.
       encoding (str): The encoding used for the table.
       transform_map (callable): A callable object used to transform the table.
+      expression (str): The expression used to identify the file belonging to table. 
     """
 
     label: str
+    zip_group: str
     table_name: str
     columns: List[str]
     encoding: str
     transform_map: callable
+    expression: str
+
+    def zip_file_belonging_to_table(self, filename: str) -> bool:
+        """
+        Determines if a file belongs to the table.
+
+        Args:
+          filename (str): The name of the file.
+
+        Returns:
+          bool: True if the file belongs to the table, False otherwise.
+        """
+        return normalize_filename(filename) == self.zip_group

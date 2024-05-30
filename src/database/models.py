@@ -7,8 +7,9 @@ from pydantic import BaseModel, Field
 from datetime import datetime
 
 from functools import reduce
+from sqlalchemy.ext.declarative import declarative_base
 
-from database.engine import Base
+Base = declarative_base()
 
 T = TypeVar('T')
 
