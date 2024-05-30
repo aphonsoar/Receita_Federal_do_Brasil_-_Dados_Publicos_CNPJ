@@ -50,8 +50,11 @@ replace: ## Replaces a token in the code. Usage: make replace token=your_token
 		--exclude-dir=.git \
 		--exclude=poetry.lock)
 
-minimal-requirements: ## Generates minimal requirements. Usage: make requirements
+minimal-requirements: ## Generates minimal requirements. Usage: make minimal-requirements
 	python3 scripts/clean_packages.py requirements.txt requirements.txt
+
+db-ip: ## Get the database IP. Usage: make db-ip
+	docker inspect crawler-db | jq -r '.[0].NetworkSettings.Networks[].IPAddress'
 
 lint: ## perform inplace lint fixes
 	ruff check --fix .
