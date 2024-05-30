@@ -5,10 +5,6 @@ description = "Receita Federal do Brasil - Dados Públicos CNPJ"
 authors = ["Aphonso Henrique do Amaral Rafael, @aphonsoar", "Bruno Peixoto <brunolnetto@gmail.com>"]
 readme = "README.md"
 packages = [{include = "poetry add _lock _d _path=\"requirements"}]
-dependencies = [
-    "RF_CNPJ @ git@github.com:brunolnetto/RF_CNPJ.git",
-]
-
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -21,7 +17,7 @@ lxml = "^5.2.2"
 pandas = "^2.2.2"
 psycopg2-binary = "^2.9.9"
 pydantic = "^2.7.1"
-python-dotenv = "^1.0.0"
+PyYAML = "^6.0.1"
 requests = "2.30.0"
 ruff = "0.4.5"
 SQLAlchemy = "^1.4.18"

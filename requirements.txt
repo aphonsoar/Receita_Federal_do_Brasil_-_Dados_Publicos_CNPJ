@@ -6,6 +6,7 @@ pandas==2.0.2
 psycopg2-binary==2.9.9
 pydantic==2.7.1
 python-dotenv==1.0.1
+PyYAML==6.0.1
 requests==2.30.0
 ruff==0.4.5
 sqlalchemy==2.0.30
