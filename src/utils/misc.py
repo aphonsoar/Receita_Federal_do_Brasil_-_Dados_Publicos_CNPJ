@@ -2,11 +2,27 @@ from sys import stdout
 from os import path, remove, cpu_count, stat
 from zipfile import ZipFile
 from requests import head
+from unicodedata import normalize
 from os import makedirs
 import subprocess
 import re
 
 from setup.logging import logger
+
+def repeat_token(token: str, n: int):
+    """
+    Repeat a token n times.
+
+    Args:
+        token (str): The token to repeat.
+        n (int): The number of times to repeat the token.
+
+    Returns:
+        token (str): The token repeated n times.
+        n (int): The number of times to repeat the token.
+    """
+
+    return ''.join([token] * n)
 
 def invert_dict_list(dict_: dict):
     """
@@ -219,22 +235,6 @@ def check_diff(url, file_name):
 
     return False # files are the same
 
-# Create this bar_progress method which is invoked automatically from wget:
-def bar_progress(current, total, width=80):
-    """
-    Displays a progress bar for a download.
-
-    Args:
-        current (int): The current number of bytes downloaded.
-        total (int): The total number of bytes to download.
-        width (int, optional): The width of the progress bar. Defaults to 80.
-    """
-    progress_message = "Downloading: %d%% [%d / %d] bytes - " % (current / total * 100, current, total)
-
-    # Don't use print(): it will print in new line every time.
-    stdout.write("\r{progress_message}")
-    stdout.flush()
-
 
 def update_progress(index, total, message):
     """
@@ -274,3 +274,95 @@ def get_line_count(filepath):
         logger.error(f"Error running wc command: {e}")
     
     return None
+
+def convert_to_bytes(size_str):
+  """
+  This function converts a size string (e.g., "22K", "321M") into bytes.
+
+  Args:
+      size_str (str): The size string to convert.
+
+  Returns:
+      int: The size in bytes, or None if the format is invalid.
+  """
+  size_value = float(size_str[:-1])  # Extract numerical value
+  size_unit = size_str[-1].upper()  # Get the unit (K, M, G)
+
+  unit_multiplier = {
+      'K': 1024,
+      'M': 1024 * 1024,
+      'G': 1024 * 1024 * 1024
+  }
+
+  if size_unit in unit_multiplier:
+    return int(size_value * unit_multiplier[size_unit])
+  else:
+    return None  # Handle invalid units
+
+def normalize_filename(filename):
+    """
+    This function normalizes a filename by removing the extension and numbers, 
+    and converting it to lowercase.
+
+    Args:
+        filename (str): The filename to normalize.
+
+    Returns:
+        str: The normalized filename.
+    """
+
+    # Remove extension
+    base_name = path.splitext(filename)[0]
+
+    # Remove number (assuming numbers are at the end)
+    base_name = re.sub(r'\d+$', '', base_name)
+
+    # Normalize accentuation (assuming NFD normalization)
+    base_name = normalize('NFD', base_name).casefold()
+
+    return base_name
+
+def normalize_filenames(filenames):
+  """
+  This function normalizes a list of filenames and creates a dictionary with key as normalized filename and value as original zip filename.
+
+  Args:
+      filenames (list): A list of filenames to normalize.
+
+  Returns:
+      dict: A dictionary with normalized filenames as keys and original filenames as values.
+  """
+  normalized_dict = {}
+  for filename in filenames:
+    base_name = normalize_filename(filename)
+
+    # Create dictionary entry
+    if base_name not in normalized_dict:
+      normalized_dict[base_name] = [filename]
+    else: 
+      normalized_dict[base_name].append(filename)
+    
+  return normalized_dict
+
+from datetime import timedelta
+
+
+def get_date_range(timestamps):
+  """
+  This function finds the minimum and maximum date in a list of datetime timestamps.
+  If there's only one element, it returns the same date and a timedelta of 0 days.
+
+  Args:
+      timestamps (list): A list of datetime timestamps.
+
+  Returns:
+      tuple: A tuple containing the minimum date and maximum date (or the same date 
+              and a timedelta of 0 days if there's only one element).
+  """
+  if not timestamps:
+    return None  # Handle empty list case
+
+  if len(timestamps) == 1:
+      return timestamps[0], timestamps[0] + timedelta(days=0)
+  else:
+      return min(timestamps), max(timestamps)
