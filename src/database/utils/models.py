@@ -10,13 +10,10 @@ from database.engine import Database
 from database.models import AuditDB
 from setup.logging import logger 
 from utils.misc import list_zip_contents, invert_dict_list
-from utils.etl import get_zip_to_tablename
+from core.utils.etl import get_zip_to_tablename
+from core.schemas import FileInfo
 
-def create_audit(
-    database: Database, 
-    filename: str, 
-    current_updated_at: datetime
-) -> Union[AuditDB, None]:
+def create_audit(database: Database, file_info: FileInfo) -> Union[AuditDB, None]:
     """
     Inserts a new audit entry if the provided processed_at is later than the latest existing entry for the filename.
 
@@ -28,16 +25,16 @@ def create_audit(
         with database.session_maker() as session:
             # Get the latest processed_at for the filename
             latest_source_updated_at = func.max(AuditDB.audi_source_updated_at)
-            is_filename = AuditDB.audi_filename == filename
+            is_filename = AuditDB.audi_filename == file_info.filename
             query = session.query(latest_source_updated_at)
             
             latest_updated_at = query.filter(is_filename).first()[0]
             
             new_audit = AuditDB(
                 audi_id=uuid4(),
-                audi_filename=filename,
-                audi_file_size_bytes=0,
-                audi_source_updated_at=current_updated_at,
+                audi_filename=file_info.filename,
+                audi_file_size_bytes=file_info.file_size,
+                audi_source_updated_at=file_info.updated_at,
                 audi_created_at=datetime.now(),                        
                 audi_downloaded_at=None,
                 audi_processed_at=None,
@@ -51,12 +48,12 @@ def create_audit(
 
             else:
                 
-                if(current_updated_at > latest_updated_at):
+                if(file_info.updated_at > latest_updated_at):
                     # Create and insert the new entry
                     return new_audit
                 
                 else:
-                    summary=f'Skipping create entry for file {filename}.'
+                    summary=f'Skipping create entry for file {file_info.filename}.'
                     explanation='Existing processed_at is later or equal.'
                     error_message=f"{summary} {explanation}"
                     logger.warn(error_message)
@@ -69,7 +66,7 @@ def create_audit(
 def create_audits(database: Database, files_info: List) -> List:
     audits = []
     for file_info in files_info:    
-        audit = create_audit(database, file_info.filename, file_info.updated_at)
+        audit = create_audit(database, file_info)
 
         if audit:
             audits.append(audit)
@@ -98,12 +95,6 @@ def insert_audit(
                 # Commit the changes to the database
                 session.commit()
             else:
-                timestamps = [
-                    new_audit.audi_created_at,
-                    new_audit.audi_downloaded_at,
-                    new_audit.audi_inserted_at,
-                    new_audit.audi_inserted_at,
-                ]
                 error_message=f"Skipping insert audit for file {filename}. "
                 logger.warn(error_message)
 
@@ -113,6 +104,17 @@ def insert_audit(
         logger.error("Error connecting to the database!")
 
 def insert_audits(database, new_audits: List):
+    """
+    Inserts a list of new audits into the database.
+
+    Args:
+        database (Database): The database object.
+        new_audits (List): A list of new audit entries.
+
+    Returns:
+        None
+    """
+
     for new_audit in new_audits:
         try:
             insert_audit(database, new_audit)
@@ -121,11 +123,7 @@ def insert_audits(database, new_audits: List):
             summary=f"Error inserting audit for file {new_audit.audi_filename}"
             logger.error(f"{summary}: {e}")
 
-def create_audit_metadata(
-    database: Database,
-    audits: List,
-    to_path: str
-):  
+def create_audit_metadata(audits: List, to_path: str):  
     """
     Creates audit metadata based on the provided database, files information, and destination path.
 
