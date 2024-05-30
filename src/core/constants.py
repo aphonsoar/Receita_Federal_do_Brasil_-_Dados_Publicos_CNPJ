@@ -1,14 +1,4 @@
-def repeat_token(token: str, n: int):
-    return ''.join([token] * n)
-
-# Source and target
-filename='NOVOLAYOUTDOSDADOSABERTOSDOCNPJ.pdf'
-file_route = '/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/arquivos/'
-layout_host = 'https://www.gov.br'
-LAYOUT_URL = f'{layout_host}{file_route}{filename}'
-
-# Você também pode acessar por: https://dados.rfb.gov.br/CNPJ/
-DADOS_RF_URL = 'http://200.152.38.155/CNPJ/'
+from utils.misc import repeat_token
 
 # Chunk size for download and extraction 
 CHUNK_SIZE = 10000
@@ -31,6 +21,7 @@ def empresa_transform_map(artifact):
 TABLES_INFO_DICT = {
     'empresa': {
         'label': 'Empresa',
+        'group': 'empresas',
         'columns': [ 
             'cnpj_basico', 
             'razao_social', 
@@ -46,6 +37,7 @@ TABLES_INFO_DICT = {
     },
     'estabelecimento': {
         'label': 'Estabelecimento',
+        'group': 'estabelecimentos',
         'columns': [
             'cnpj_basico', 
             'cnpj_ordem', 
@@ -83,6 +75,7 @@ TABLES_INFO_DICT = {
     },
     'socios': {
         'label': 'Socios',
+        'group': 'socios',
         'columns': [
             'cnpj_basico',
             'identificador_socio',
@@ -101,6 +94,7 @@ TABLES_INFO_DICT = {
     },
     'simples': {
         'label': 'Simples',
+        'group': 'simples',
         'columns': [
             'cnpj_basico',
             'opcao_pelo_simples',
@@ -114,37 +108,43 @@ TABLES_INFO_DICT = {
         'encoding': 'latin-1'
     },
     'cnae': {
-        'label': 'CNAE',
+        'label': 'CNAEs',
+        'group': 'cnaes',
         'columns': ['codigo', 'descricao'],
         'expression': 'CNAE',
         'encoding': 'latin-1'
     },
     'moti': {
-        'label': 'Motivos da situação atual',
+        'label': 'motivos',
+        'group': 'motivos',
         'columns': ['codigo', 'descricao'],
         'expression': 'MOTI',
         'encoding': 'latin-1'
     },
     'munic': {
-        'label': 'Municípios',
+        'label': 'municipios',
+        'group': 'municipios',
         'columns': ['codigo', 'descricao'],
         'expression': 'MUNIC',
         'encoding': 'latin-1'
     },
     'natju': {
-        'label': 'Natureza jurídica',
+        'label': 'Naturezas',
+        'group': 'naturezas',
         'columns': ['codigo', 'descricao'],
         'expression': 'NATJU',
         'encoding': 'latin-1'
     },
     'pais': {
-        'label': 'País',
+        'label': 'Paises',
+        'group': 'paises',
         'columns': ['codigo', 'descricao'],
         'expression': 'PAIS',
         'encoding': 'latin-1'
     },
     'quals': {
-        'label': 'País',
+        'label': 'Qualificacoes',
+        'group': 'qualificacoes',
         'columns': ['codigo', 'descricao'],
         'expression': 'QUALS',
         'encoding': 'latin-1'
