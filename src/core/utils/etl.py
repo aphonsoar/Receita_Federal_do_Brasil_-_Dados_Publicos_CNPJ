@@ -3,6 +3,7 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from os import path
+from functools import reduce
 
 from database.models import AuditDB
 from database.dml import (
@@ -10,10 +11,10 @@ from database.dml import (
     generate_tables_indices
 )
 from utils.misc import (    
-    extract_zip_file, 
     get_file_size, 
     get_max_workers
 )
+from utils.zip import extract_zip_file
 from core.constants import TABLES_INFO_DICT
 from setup.logging import logger 
 
@@ -25,6 +26,111 @@ tablename_tuples = list(zip(tablename_list, trimmed_tablename_list))
 ####################################################################################################
 ## LER E INSERIR DADOS #############################################################################
 ####################################################################################################
+
+def download_this_zipfile(
+    audit: AuditDB,
+    url: str,
+    zip_filename: str,
+    download_path: str,
+    has_progress_bar: bool
+):
+    """
+    Downloads a zip file from the given URL to the specified output path.
+
+    Args:
+        url (str): The URL of the file to download.
+        zip_filename (str): The name of the zip file to download.
+        download_path (str): The path to save the downloaded file.
+        has_progress_bar (bool): Whether to display a progress bar during the download.
+
+    Raises:
+        OSError: If an error occurs during the download process.
+    """
+
+    full_path = path.join(download_path, zip_filename)
+    
+    try:
+        logger.info(f"Downloading file {zip_filename}.")
+        file_url = url + '/' + zip_filename
+        
+        # Assuming download updates progress bar itself
+        if(has_progress_bar):
+            download(file_url, out=download_path)
+        else:
+            download(file_url, out=download_path, bar=None)
+
+    except Exception as e:
+        summary=f"Error downloading {url}"
+        message=f"{summary}: {e}"
+        logger.error(message)
+        
+        return None
+    
+    finally:
+        logger.info(f"Finished file download of file {zip_filename}...")
+
+        # Update audit metadata
+        audit.audi_downloaded_at = datetime.now()
+        audit.audi_file_size_bytes = get_file_size(full_path)
+
+        return audit
+
+def extract_this_zipfile(
+    audit: AuditDB,
+    zip_filename: str,
+    download_path: str,
+    extracted_path: str
+):
+    """
+    Extracts a zip file to the specified directory.
+
+    Args:
+        zip_filename (str): The name of the zip file to extract.
+        download_path (str): The path to the directory containing the zip file.
+        extracted_path (str): The path to the directory where the file will be extracted.
+    
+    Raises:
+        OSError: If an error occurs during the extraction process.
+    """
+    
+    full_path = path.join(download_path, zip_filename)
+
+    try:
+        logger.info(f"Extracting file {zip_filename}...")
+        # Assuming extraction updates progress bar itself
+        extract_zip_file(full_path, extracted_path)
+    
+    except Exception as e:
+        summary=f"Error extracting file {zip_filename}"
+        message=f"{summary}: {e}"
+        logger.error(message)
+    
+    finally:
+        logger.info(f"Finished file extraction of file {zip_filename}.")
+        
+        audit.audi_processed_at = datetime.now()
+        return audit
+
+
+def download_and_extract_file(
+    audit: AuditDB,
+    url: str,                       
+    zip_filename: str,
+    download_path: str,
+    extracted_path: str,
+    has_progress_bar: bool,
+):
+    # Download file
+    audit = download_this_zipfile(
+        audit, url, zip_filename, download_path, has_progress_bar
+    )
+
+    # Extract file
+    audit = extract_this_zipfile(
+        audit, zip_filename, download_path, extracted_path
+    )
+
+    return audit
 
 def download_and_extract_files(
     audit: AuditDB, 
@@ -45,40 +151,10 @@ def download_and_extract_files(
     Raises:
         OSError: If an error occurs during the download or extraction process.
     """
-    file_name = path.basename(url)
-    full_path = path.join(download_path, file_name)
-    
-    try:
-        # Assuming download updates progress bar itself
-        if(has_progress_bar):
-            download(url, out=download_path)
-
-        else:
-            download(url, out=download_path, bar=None)
-
-    except OSError as e:
-        summary=f"Error downloading {url}"
-        message=f"{summary}: {e}"
-        logger.error(message)
-        
-        return None
-    
-    finally:
-        # Update audit metadata
-        audit.audi_downloaded_at = datetime.now()
-        audit.audi_file_size_bytes = get_file_size(full_path)
-
-    try:
-        # Assuming extraction updates progress bar itself
-        extract_zip_file(full_path, extracted_path)
-        audit.audi_processed_at = datetime.now()
-        
-        return audit
-    
-    except OSError as e:
-        summary=f"Extracting file {file_name}"
-        message=f"{summary}: {e}"
-        logger.error(message)
+    for zip_filename in audit.audi_filenames:
+        download_and_extract_file(
+            audit, url, zip_filename, download_path, extracted_path, has_progress_bar 
+        )
         
         
 def get_rf_filenames_parallel(
@@ -99,18 +175,15 @@ def get_rf_filenames_parallel(
     """
     
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        
-        futures = [
-            executor.submit(
+        futures = []
+
+        for audit in audits:
+            task = executor.submit(
                 download_and_extract_files, 
-                audit,
-                url + '/' + audit.audi_filename, 
-                output_path, 
-                extracted_path,
-                False
+                audit, url, output_path, extracted_path, False
             )
-            for audit in audits
-        ]
+
+            futures.append(task)
 
         results = []
         for future in tqdm(as_completed(futures), total=len(audits)):
@@ -137,35 +210,27 @@ def get_rf_filenames_serial(
         output_path (str): The path to save the downloaded files.
         extracted_path (str): The path to the directory where the files will be extracted.
     """
-    counter = 0
     error_count = 0
     error_basefiles = []
     total_count = len(audits)
     audits_ = []
-    
+    audits = sorted(audits, key=lambda x: x.audi_file_size_bytes)
+
     for index, audit in enumerate(audits):
-        try:
+        try:    
             # Download and extract file
             audit_ = download_and_extract_files(
-                audit,
-                url + '/' + audit.audi_filename,
-                output_path, 
-                extracted_path, 
-                True
+                audit, url, output_path, extracted_path, True
             )
             
             audits_.append(audit_)
-            
-            # Update progress bar after download (success or failure)
-            counter = counter + 1
-            logger.info('\n')
 
         except OSError as e:
-            summary = f"Erro ao baixar ou extrair arquivo {audit.audi_filename}"
+            summary = f"Erro ao baixar ou extrair arquivo da tabela {audit.audi_table_name}"
             message = f"{summary}: {e}"
             logger.error(message)
             error_count += 1
-            error_basefiles.append(audit.audi_filename)
+            error_basefiles.append(audit.audi_table_name)
         
         finally:
             progress_message=f"({index}/{total_count}) arquivos baixados"
@@ -242,29 +307,26 @@ def load_RF_data_on_database(database, from_folder, audit_metadata):
         None
     """
     table_to_filenames = audit_metadata.tablename_to_zipfile_to_files
-    zip_filenames = [ audit.audi_filename for audit in audit_metadata.audit_list ]
-    
-    table_to_zip_dict = {
-        tablename: zip_to_files.keys()
-        for tablename, zip_to_files in audit_metadata.tablename_to_zipfile_to_files.items()
-    }
-
     zip_tablenames_set = set(table_to_filenames.keys())
-
+    
     # Load data
-    for table_name, zipfile_content_dict in table_to_filenames.items():
+    for index, (table_name, zipfile_content_dict) in enumerate(table_to_filenames.items()):
         table_files_list = list(zipfile_content_dict.values())
         
         table_filenames = sum(table_files_list, [])
-        
+
         # Populate this table
         populate_table(database, table_name, from_folder, table_filenames)
-        
-        table_zipfiles = table_to_zip_dict[table_name]
-        for index, audit in enumerate(audit_metadata.audit_list):
-            if audit.audi_filename in table_zipfiles:
-                audit_metadata.audit_list[index].audi_inserted_at = datetime.now()
 
+        # Update audit metadata
+        audit_metadata.audit_list[index].audi_inserted_at = datetime.now()
+
+    zip_filenames = list(
+        reduce(
+            lambda x, y: list(x) + list(y), 
+            map(lambda x: x.keys(), table_to_filenames.values())
+        )
+    )
     logger.info(f"Carga dos arquivos zip {zip_filenames} finalizado!")
 
     # Generate tables indices

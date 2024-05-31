@@ -16,7 +16,29 @@ logger = logging.getLogger(__name__)
 load_dotenv()
 ENVIRONMENT = getenv('ENVIRONMENT', 'development')
 
-logging_format="%(name)s %(asctime)s %(levelname)s %(filename)s %(lineno)s %(process)d %(message)s"
+fields = [
+    "threadName",
+    "name",
+    "thread",
+    "created",
+    "process",
+    "processName",
+    "relativeCreated",
+    "module",
+    "funcName",
+    "levelno",
+    "msecs",
+    "pathname",
+    "lineno",
+    "asctime",
+    "message",
+    "filename",
+    "levelname",
+    "special",
+    "run"
+]
+
+logging_format=" ".join(map(lambda field_name: f"%({field_name})s", fields))
 fmt = jsonlogger.JsonFormatter(logging_format)
 
 if ENVIRONMENT == 'development':

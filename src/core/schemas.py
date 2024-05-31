@@ -12,7 +12,7 @@ class Audit(BaseModel):
 
   Attributes:
     audi_id (int): The ID of the audit entry.
-    audi_filename (str): The filename associated with the audit entry.
+    audi_table_name (str): The table name associated with the audit entry.
     audi_source_updated_at (datetime): The datetime when the source was last updated.
     audi_created_at (datetime): The datetime when the audit entry was created.
     audi_downloaded_at (datetime): The datetime when the audit entry was downloaded.
@@ -21,7 +21,7 @@ class Audit(BaseModel):
 
   """
   audi_id: int
-  audi_filename: str
+  audi_table_name: str
   audi_file_size_bytes: int
   audi_source_updated_at: datetime
   audi_created_at: datetime
@@ -56,6 +56,7 @@ class FileGroupInfo(BaseModel):
   elements: List[str]
   date_range: Tuple[datetime, datetime]
   table_name: str
+  size_bytes: int = 0
 
   def date_diff(self) -> float:
     """

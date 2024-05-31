@@ -21,6 +21,7 @@ def file_group_name_to_table_name(file_group_name: str):
         )
     )[0][0]
 
+
 def create_file_groups(files_info: List[FileInfo]) -> List[FileGroupInfo]:
     """
     Creates a list of file groups based on the provided file information.
@@ -35,13 +36,17 @@ def create_file_groups(files_info: List[FileInfo]) -> List[FileGroupInfo]:
     zip_update_at={
         file_info.filename: file_info.updated_at for file_info in files_info
     }
+    zip_file_size={
+        file_info.filename: file_info.file_size for file_info in files_info
+    }
     zip_filenames=[ file_info.filename for file_info in files_info ]
     normalized_dict=normalize_filenames(zip_filenames)
 
     groups = [
         {
             "name": normalized,
-            "elements": originals, 
+            "elements": originals,
+            "size_bytes": sum([ zip_file_size[original] for original in originals ]),
             "date_range": get_date_range([ zip_update_at[original] for original in originals ]),
             "table_name": file_group_name_to_table_name(normalized)
         }
@@ -53,7 +58,8 @@ def create_file_groups(files_info: List[FileInfo]) -> List[FileGroupInfo]:
             name=group['name'], 
             elements=group['elements'], 
             date_range=group['date_range'],
-            table_name=group['table_name']
+            table_name=group['table_name'],
+            size_bytes=group['size_bytes']
         )
         for group in groups
     ]

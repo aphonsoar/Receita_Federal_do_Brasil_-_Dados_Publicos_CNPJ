@@ -7,6 +7,7 @@ from functools import reduce
 from shutil import rmtree
 
 from setup.logging import logger
+from core.utils.schemas import create_file_groups
 from database.models import AuditDB
 from core.schemas import FileInfo, AuditMetadata
 from database.utils.models import (
@@ -18,7 +19,7 @@ from core.utils.etl import (
     get_RF_data, 
     load_RF_data_on_database
 )
-from utils.misc import convert_to_bytes 
+from utils.misc import convert_to_bytes, remove_folder
 
 class CNPJ_ETL:
 
@@ -33,7 +34,6 @@ class CNPJ_ETL:
         self.download_folder = download_folder
         self.extract_folder = extract_folder
         self.is_parallel = is_parallel
-        self.delete_zips = delete_zips
         
     def scrap(self):
         """
@@ -102,20 +102,12 @@ class CNPJ_ETL:
         Returns:
             None
         """
-        # Delete extract folder content
-        try:
-            rmtree(self.extract_folder)
-        except Exception as e:
-            logger.error(f"Error deleting extract folder: {e}")
-
+        
         # Get data
         if audits:
             get_RF_data(
-                self.data_url, 
-                self.layout_url, 
-                audits, 
-                self.download_folder, 
-                self.extract_folder, 
+                self.data_url, self.layout_url, 
+                audits, self.download_folder, self.extract_folder, 
                 self.is_parallel
             )
 
@@ -124,12 +116,9 @@ class CNPJ_ETL:
 
             return audit_metadata
 
-        # Deletar arquivos zip baixados
-        if self.delete_zips:
-            try:
-                rmtree(self.download_folder)
-            except Exception as e:
-                logger.error(f"Error deleting download folder: {e}")
+        # Delete download folder content
+        remove_folder(self.download_folder)
+
 
     def retrieve_data(self):
         """
@@ -141,19 +130,22 @@ class CNPJ_ETL:
         # Scrap data
         files_info = self.scrap()
 
+        # Create file groups
+        file_groups_info = create_file_groups(files_info)
+
         # Create audits
-        audits = create_audits(self.database, files_info)
+        audits = create_audits(self.database, file_groups_info)
 
-        # Test purpose only
-        from os import getenv
-        if getenv("ENVIRONMENT") == "development": 
-            audits = list(
-                filter(
-                    lambda x: x.audi_file_size_bytes < 5000, 
-                    sorted(audits, key=lambda x: x.audi_file_size_bytes)
-                )
-            )
-
+        # # Test purpose only
+        # from os import getenv
+        # if getenv("ENVIRONMENT") == "development": 
+        #     audits = list(
+        #         filter(
+        #             lambda x: x.audi_file_size_bytes < 5000, 
+        #             sorted(audits, key=lambda x: x.audi_file_size_bytes)
+        #         )
+        #     )
+        
         if audits:
             # Get data
             return self.get_data(audits)

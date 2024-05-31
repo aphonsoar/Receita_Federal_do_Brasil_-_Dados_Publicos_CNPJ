@@ -4,9 +4,9 @@
 """
 
 from setup.base import get_sink_folder, init_database
-
 from core.etl import CNPJ_ETL
 from core.utils.schemas import create_file_groups
+from database.utils.models import create_audits
 
 # Folders and database setup
 download_folder, extract_folder = get_sink_folder()
@@ -25,20 +25,10 @@ scrapper = CNPJ_ETL(
     layout_url,
     download_folder,
     extract_folder,
-    is_parallel=True,
+    is_parallel=False,
     delete_zips=False
 )
 
 # Scrap data
-files_info = scrapper.scrap()
+scrapper.run()
 
-# Create file groups
-file_groups_info = create_file_groups(files_info)
-
-print(file_groups_info)
-
-# # Create audits
-# audits = create_audits(database, files_info)
-
-# # Load data
-# scrapper.run()

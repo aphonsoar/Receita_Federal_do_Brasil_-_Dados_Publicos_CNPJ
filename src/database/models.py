@@ -1,5 +1,5 @@
 from sqlalchemy import (
-  Column, Integer, String, TIMESTAMP,
+  Column, Integer, String, TIMESTAMP, JSON
 )
 from sqlalchemy.dialects.postgresql import UUID
 from typing import Optional, Generic, TypeVar
@@ -15,7 +15,7 @@ T = TypeVar('T')
 
 class AuditDBSchema(BaseModel, Generic[T]):
     audi_id: int = Field(..., description="Unique identifier for the audit entry.")
-    audi_filename: str = Field(..., description="Filename associated with the audit entry.")
+    audi_table_name: str = Field(..., description="Table name associated with the audit entry.")
     audi_source_updated_at: Optional[datetime] = Field(
         None, description="Timestamp of the last source update."
     )
@@ -39,10 +39,11 @@ class AuditDB(Base):
     __tablename__ = 'audit'
 
     audi_id = Column(UUID(as_uuid=True), primary_key=True)
-    audi_filename = Column(String(255), nullable=False)
+    audi_created_at = Column(TIMESTAMP, nullable=True)
+    audi_table_name = Column(String(255), nullable=False)
+    audi_filenames = Column(JSON, nullable=False)
     audi_file_size_bytes = Column(Integer, nullable=True)
     audi_source_updated_at = Column(TIMESTAMP, nullable=True)
-    audi_created_at = Column(TIMESTAMP, nullable=True)
     audi_downloaded_at = Column(TIMESTAMP, nullable=True)
     audi_processed_at = Column(TIMESTAMP, nullable=True)
     audi_inserted_at = Column(TIMESTAMP, nullable=True)
@@ -91,7 +92,10 @@ class AuditDB(Base):
         inserted_at=f"audi_inserted_at={self.audi_inserted_at}"
         timestamps=f"{source_updated_at}, {created_at}, {downloaded_at}, {processed_at}, {inserted_at}"
         
-        file_info = f"audi_filename={self.audi_filename}, audi_file_size_bytes={self.audi_file_size_bytes}"
+        table_name=f"audi_table_name={self.audi_table_name}"
+        file_size=f"audi_file_size_bytes={self.audi_file_size_bytes}"
+        filenames=f"audi_filenames={self.audi_filenames}"
+        file_info = f"{table_name}, {filenames}, {file_size}"
         args=f"audi_id={self.audi_id}, {file_info}, {timestamps}"
         
         return f"AuditDB({args})"

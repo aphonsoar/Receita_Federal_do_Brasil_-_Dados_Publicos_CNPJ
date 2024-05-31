@@ -2,10 +2,13 @@ from sys import stdout
 from os import path, remove, cpu_count, stat
 from zipfile import ZipFile
 from requests import head
+from shutil import rmtree
 from unicodedata import normalize
 from os import makedirs
 import subprocess
 import re
+from tqdm import tqdm
+import wget
 
 from setup.logging import logger
 
@@ -71,29 +74,6 @@ def get_file_size(file_path):
     # Catch unexpected exceptions and re-raise with more context
         raise Exception(f"Unexpected error getting file size for {file_path}: {e}") from e
 
-def extract_zip_file(file_path, extracted_files_path):
-    """
-    Extracts a zip file to the specified directory.
-
-    Args:
-        file_path (str): The path to the zip file.
-        extracted_files_path (str): The path to the directory where the files will be extracted.
-    """
-    with ZipFile(file_path, 'r') as zip_ref:
-        zip_ref.extractall(extracted_files_path)
-        
-def list_zip_contents(zip_file_path):
-    """
-    Lists the filenames and other information about files within a zip archive.
-
-    Args:
-        zip_file_path (str): Path to the zip archive.
-
-    Returns:
-        list: A list of ZipInfo objects containing information about each file in the zip.
-    """
-    with ZipFile(zip_file_path, 'r') as zip_ref:
-        return zip_ref.infolist()
 
 def tuple_list_to_dict(tuple_list: list):
     """
@@ -366,3 +346,9 @@ def get_date_range(timestamps):
       return timestamps[0], timestamps[0] + timedelta(days=0)
   else:
       return min(timestamps), max(timestamps)
+
+def remove_folder(folder: str):
+    try:
+        rmtree(folder)
+    except Exception as e:
+        logger.error(f"Error deleting folder {folder}: {e}")

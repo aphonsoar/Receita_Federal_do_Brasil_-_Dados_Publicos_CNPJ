@@ -1,21 +1,6 @@
 import pandas as pd
 
-from core.constants import CHUNK_SIZE
 from setup.logging import logger
-
-def dataframe_chunker_gen(df: pd.DataFrame):
-    '''
-    Generator function that yields chunks of a pandas DataFrame.
-
-    Parameters:
-        df (pd.DataFrame): The DataFrame to be chunked.
-
-    Yields:
-        pd.DataFrame: A chunk of the original DataFrame.
-    '''
-    
-    for i in range(0, len(df), CHUNK_SIZE):
-        yield df[i:i + CHUNK_SIZE]
 
 def to_sql(dataframe: pd.DataFrame, **kwargs):
     '''
