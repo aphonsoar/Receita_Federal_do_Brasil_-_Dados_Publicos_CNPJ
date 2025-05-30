@@ -1,3 +1,11 @@
+"""
+Docker utility functions.
+
+This module provides helpers for interacting with Docker environments,
+such as parsing docker-compose files to retrieve service information,
+specifically for identifying the PostgreSQL service host when running
+within a Dockerized environment.
+"""
 from re import match
 from yaml import safe_load, YAMLError
 from os import environ

@@ -1,3 +1,10 @@
+"""
+Utility functions for schema-related operations, primarily focusing on grouping
+file information and mapping file group names to table names.
+
+These utilities help organize scraped file metadata into logical groups that
+correspond to database tables, facilitating the ETL process.
+"""
 from typing import List, Dict
 from utils.misc import normalize_filenames, get_date_range
 from core.schemas import FileInfo, FileGroupInfo
@@ -28,10 +35,19 @@ def create_file_groups(files_info: List[FileInfo]) -> List[FileGroupInfo]:
     Creates a list of file groups based on the provided file information.
 
     Args:
-        files_info (List[FileInfo]): A list of FileInfo objects.
+        files_info (List[FileInfo]): A list of FileInfo objects, typically obtained
+                                     from scraping the data source.
     
     Returns:
-        List[FileGroupInfo]: A list of FileGroupInfo objects.
+        List[FileGroupInfo]: A list of FileGroupInfo objects, where each object
+                             represents a group of related files (e.g., parts of
+                             the same table) along with consolidated metadata like
+                             total size and date range.
+
+    Note:
+        If `file_group_name_to_table_name` fails to map a normalized group name
+        to a table name (e.g., due to unexpected file naming conventions), an error
+        is logged for that group, and it's excluded from the returned list.
     """
     # Build dictionaries from files_info for size and update_at lookup
     filename_to_update_at = {file_info.filename: file_info.updated_at for file_info in files_info}

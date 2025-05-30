@@ -1,3 +1,11 @@
+"""
+Main script for the ETL (Extract, Transform, Load) process of CNPJ data
+from the Brazilian Federal Revenue (Receita Federal).
+
+This script orchestrates the download, extraction, processing, and loading of
+CNPJ data into a DuckDB database. It utilizes the CNPJ_ETL class for the core
+ETL logic and configuration parameters defined in `src.config`.
+"""
 # Project: ETL - CNPJs da Receita Federal do Brasil
 # Objective: Download, transform, and load Brazilian Federal Revenue CNPJ data
 
@@ -21,7 +29,8 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeEl
 
 from setup.base import get_sink_folder, init_database
 from core.etl import CNPJ_ETL
-from core.constants import TABLES_INFO_DICT 
+from core.constants import TABLES_INFO_DICT
+from src.config import YEAR, MONTH, DB_FILE_TEMPLATE, PARQUET_DIR, FILES_URL_TEMPLATE, LAYOUT_URL
 
 # ─── Configuration ───
 logging.basicConfig(
@@ -31,24 +40,34 @@ log = logging.getLogger("cnpj_etl")
 start_time = time.time()
 
 def main():
-    YEAR = 2025
-    MONTH = str(5).zfill(2)
-    DB_FILE = f"dadosrfb_{YEAR}{MONTH}.duckdb"
-    PARQUET_DIR = Path("parquet_out")
-    FILES_URL = f"https://arquivos.receitafederal.gov.br/dados/cnpj/dados_abertos_cnpj/{YEAR}-{MONTH}"
-    LAYOUT_URL = "https://www.gov.br/receitafederal/dados/cnpj-metadados.pdf"
+    """
+    Main function to execute the CNPJ ETL process.
+
+    It initializes configurations, sets up folders and database connections,
+    instantiates the CNPJ_ETL class, and triggers the ETL run.
+    Finally, it logs the total execution time.
+    """
+    # Format database file name and files URL using year and month from config
+    DB_FILE = DB_FILE_TEMPLATE.format(YEAR=YEAR, MONTH=MONTH)
+    FILES_URL = FILES_URL_TEMPLATE.format(YEAR=YEAR, MONTH=MONTH)
 
     log.info(f"ETL start: {datetime.now():%Y-%m-%d %H:%M:%S}")
 
-    # Phase 0: Download & extract
-    download_folder, extract_folder = get_sink_folder()
-    database = init_database(f"dadosrfb_{YEAR}{MONTH}")
+    # Phase 0: Setup - Prepare download/extract folders and initialize database
+    download_folder, extract_folder = get_sink_folder()  # Get or create designated folders
+    database = init_database(DB_FILE)  # Initialize DuckDB database instance
     
+    # Instantiate the main ETL orchestrator
     scraper = CNPJ_ETL(
-        database, FILES_URL, LAYOUT_URL,
-        download_folder, extract_folder,
-        is_parallel=True, delete_zips=True
+        database=database,
+        data_url=FILES_URL,  # URL for CNPJ data files
+        layout_url=LAYOUT_URL,  # URL for the layout metadata PDF
+        download_folder=download_folder, # Folder to store downloaded ZIP files
+        extract_folder=extract_folder, # Folder to store extracted CSV files
+        is_parallel=True,  # Enable parallel processing for download/extraction
+        delete_zips=True  # Delete ZIP files after successful extraction
     )
+    # Execute the full ETL process
     audits = scraper.run()
 
     elapsed = time.time() - start_time

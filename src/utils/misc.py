@@ -1,3 +1,11 @@
+"""
+Miscellaneous utility functions for various tasks.
+
+This module collects a variety of helper functions that don't fit neatly
+into other specific utility modules. These include functions for string
+manipulation, dictionary operations, file system interactions, progress
+display, and data normalization.
+"""
 from sys import stdout
 from os import path, remove, cpu_count, stat
 from requests import head
@@ -19,10 +27,8 @@ def repeat_token(token: str, n: int):
         n (int): The number of times to repeat the token.
 
     Returns:
-        token (str): The token repeated n times.
-        n (int): The number of times to repeat the token.
+        str: The token repeated n times.
     """
-
     return ''.join([token] * n)
 
 def invert_dict_list(dict_: dict):
@@ -153,43 +159,64 @@ def get_max_workers():
     Gets the maximum number of workers based on the number of CPU cores.
 
     Returns:
-        int: The maximum number of workers.
+        int: The maximum number of workers, calculated as one less than the number
+             of CPU cores. Returns `None` if `cpu_count()` returns `None` (e.g., if
+             the number of CPUs is indeterminate).
     """
     # Get the number of CPU cores
     num_cores = cpu_count()
 
     # Adjust the number of workers based on the requirements
-    # You should leave some cores free for other tasks
-    max_workers = num_cores - 1 if num_cores else None
+    # Typically, leave some cores free for other system tasks.
+    if num_cores:
+        max_workers = num_cores - 1
+        return max_workers if max_workers > 0 else 1 # Ensure at least 1 worker if there's a core
+    else:
+        return None # Undetermined number of cores
 
-    return max_workers
-
-def delete_var(var):
+def delete_var(var_name: str, local_vars: dict, global_vars: dict):
     """
-    Deletes a variable from memory.
+    Attempts to delete a variable by name from local and global scopes.
+
+    This is a utility primarily for explicit memory management in specific contexts,
+    though Python's garbage collection usually handles this. Use with caution.
 
     Args:
-        var: The variable to delete.
+        var_name (str): The string name of the variable to delete.
+        local_vars (dict): The dictionary of local variables (e.g., from `locals()`).
+        global_vars (dict): The dictionary of global variables (e.g., from `globals()`).
     """
     try:
-        del var
-    except:
-        pass
+        if var_name in local_vars:
+            del local_vars[var_name]
+    except NameError: # Should not happen if var_name is in local_vars keys
+        pass # Variable not found or already deleted
+    except Exception as e:
+        logger.debug(f"Could not delete local variable '{var_name}': {e}")
 
-def this_folder():
+    try:
+        if var_name in global_vars:
+            del global_vars[var_name]
+    except NameError: # Should not happen if var_name is in global_vars keys
+        pass # Variable not found or already deleted
+    except Exception as e:
+        logger.debug(f"Could not delete global variable '{var_name}': {e}")
+
+
+def this_folder() -> str:
     """
-    Gets the path of the current file.
+    Gets the absolute path of the directory containing this current file (misc.py).
 
     Returns:
-        str: The path of the current file.
+        str: The absolute path to the directory of this script.
     """
-    # Get the path of the current file
+    # Get the path of the current file (misc.py)
     current_file_path = path.abspath(__file__)
 
     # Get the folder containing the current file
     return path.dirname(current_file_path)
 
-def check_diff(url, file_name):
+def check_diff(url: str, file_name: str) -> bool:
     """
     Checks if the file on the server exists on disk and if it has the same size on the server.
 
@@ -339,8 +366,17 @@ def get_date_range(timestamps):
     else:
         return min(timestamps), max(timestamps)
 
-def remove_folder(folder: str):
+def remove_folder(folder_path: str) -> None:
+    """
+    Removes a folder and all its contents. Logs an error if removal fails.
+
+    Args:
+        folder_path (str): The path to the folder to be removed.
+    """
     try:
-        rmtree(folder)
+        rmtree(folder_path)
+        logger.info(f"Successfully removed folder: {folder_path}")
+    except FileNotFoundError:
+        logger.warn(f"Folder not found, cannot remove: {folder_path}")
     except Exception as e:
-        logger.error(f"Error deleting folder {folder}: {e}")
+        logger.error(f"Error deleting folder {folder_path}: {e}")
