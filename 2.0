@@ -1,0 +1,3 @@
+Requirement already satisfied: sqlalchemy in c:\users\lealp\.conda\envs\receitafederalbrasileira_cnpj\lib\site-packages (2.0.41)
+Requirement already satisfied: greenlet>=1 in c:\users\lealp\.conda\envs\receitafederalbrasileira_cnpj\lib\site-packages (from sqlalchemy) (3.2.3)
+Requirement already satisfied: typing-extensions>=4.6.0 in c:\users\lealp\.conda\envs\receitafederalbrasileira_cnpj\lib\site-packages (from sqlalchemy) (4.14.1)
