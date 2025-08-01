@@ -1,59 +1,71 @@
-# Dados Públicos CNPJ
-- Fonte oficial da Receita Federal do Brasil, [aqui](https://dados.gov.br/dados/conjuntos-dados/cadastro-nacional-da-pessoa-juridica---cnpj).
-- Layout dos arquivos, [aqui](https://www.gov.br/receitafederal/dados/cnpj-metadados.pdf).
+# CNPJ Data Processor
 
-A Receita Federal do Brasil disponibiliza bases com os dados públicos do cadastro nacional de pessoas jurídicas (CNPJ).
+Este projeto é um pipeline de ETL (Extração, Transformação e Carga) para processar os dados públicos de CNPJ da Receita Federal do Brasil e carregá-los em um banco de dados SQL Server Express.
 
-De forma geral, nelas constam as mesmas informações que conseguimos ver no cartão do CNPJ, quando fazemos uma consulta individual, acrescidas de outros dados de Simples Nacional, sócios e etc. Análises muito ricas podem sair desses dados, desde econômicas, mercadológicas até investigações.
+## Funcionalidades
 
-Nesse repositório consta um processo de ETL para **i)** baixar os arquivos; **ii)** descompactar; **iii)** ler, tratar e **iv)** inserir num banco de dados relacional PostgreSQL.
+- **Download Automático**: Baixa os arquivos de dados mais recentes diretamente do site da Receita Federal.
+- **Extração de Dados**: Descompacta os arquivos baixados.
+- **Limpeza e Higienização**: Corrige inconsistências e erros de formatação nos arquivos CSV.
+- **Carga de Dados Otimizada**: Carrega os dados em um banco de dados SQL Server Express de forma eficiente.
+- **Criação de Views**: Inclui scripts SQL para criar views que facilitam a consulta dos dados.
 
----------------------
+## Requisitos
 
-### Infraestrutura necessária:
-- [Python 3.8](https://www.python.org/downloads/release/python-3810/)
-- [PostgreSQL 14.2](https://www.postgresql.org/download/)
+- Python 3.8 ou superior
+- SQL Server Express
+- Driver ODBC para SQL Server
 
----------------------
+## Como Usar
 
-### How to use:
-1. Com o Postgres instalado, inicie a instância do servidor (pode ser local) e crie o banco de dados conforme o arquivo `banco_de_dados.sql`.
+1. **Clone o repositório:**
+   ```bash
+   git clone https://github.com/aphonsoar/Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ.git
+   cd Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ
+   ```
 
-2. Crie um arquivo `.env` no diretório `code`, conforme as variáveis de ambiente do seu ambiente de trabalho (localhost). Utilize como referência o arquivo `.env_template`. Você pode também, por exemplo, renomear o arquivo de `.env_template` para apenas `.env` e então utilizá-lo:
-   - `OUTPUT_FILES_PATH`: diretório de destino para o donwload dos arquivos
-   - `EXTRACTED_FILES_PATH`: diretório de destino para a extração dos arquivos .zip
-   - `DB_USER`: usuário do banco de dados criado pelo arquivo `banco_de_dados.sql`
-   - `DB_PASSWORD`: senha do usuário do BD
-   - `DB_HOST`: host da conexão com o BD
-   - `DB_PORT`: porta da conexão com o BD
-   - `DB_NAME`: nome da base de dados na instância (`Dados_RFB` - conforme arquivo `banco_de_dados.sql`)
+2. **Instale as dependências:**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-3. Instale as bibliotecas necessárias, disponíveis em `requirements.txt`:
-```
-pip install -r requirements.txt
-```
+3. **Configure as variáveis de ambiente:**
+   - Copie o arquivo `code/.env_template` para `code/.env`.
+   - Edite o arquivo `code/.env` com as suas configurações de banco de dados:
+     ```
+     # URL for downloading the data from Receita Federal
+     DADOS_RF_URL="https://arquivos.receitafederal.gov.br/dados-publicos-cnpj/"
 
-4. Execute o arquivo `ETL_coletar_dados_e_gravar_BD.py` e aguarde a finalização do processo.
-   - Os arquivos são grandes. Dependendo da infraestrutura isso deve levar muitas horas para conclusão.
-   - Arquivos de 08/05/2021: `4,68 GB` compactados e `17,1 GB` descompactados.
+     # Path to store the downloaded zip files
+     OUTPUT_FILES_PATH="../OUTPUT/"
 
----------------------
+     # Path to store the extracted csv files
+     EXTRACTED_FILES_PATH="../EXTRACTED/"
 
-### Tabelas geradas:
-- Para maiores informações, consulte o [layout](https://www.gov.br/receitafederal/pt-br/assuntos/orientacao-tributaria/cadastros/consultas/arquivos/NOVOLAYOUTDOSDADOSABERTOSDOCNPJ.pdf).
-  - `empresa`: dados cadastrais da empresa em nível de matriz
-  - `estabelecimento`: dados analíticos da empresa por unidade / estabelecimento (telefones, endereço, filial, etc)
-  - `socios`: dados cadastrais dos sócios das empresas
-  - `simples`: dados de MEI e Simples Nacional
-  - `cnae`: código e descrição dos CNAEs
-  - `quals`: tabela de qualificação das pessoas físicas - sócios, responsável e representante legal.
-  - `natju`: tabela de naturezas jurídicas - código e descrição.
-  - `moti`: tabela de motivos da situação cadastral - código e descrição.
-  - `pais`: tabela de países - código e descrição.
-  - `munic`: tabela de municípios - código e descrição.
+     # Database connection settings for SQL Server
+     DB_DRIVER="ODBC Driver 17 for SQL Server"
+     DB_SERVER="your_server_name"
+     DB_NAME="Dados_RFB"
+     DB_USER="your_username"
+     DB_PASSWORD="your_password"
+     ```
 
+4. **Execute o processador:**
+   ```bash
+   python code/cnpj_processor.py
+   ```
 
-- Pelo volume de dados, as tabelas  `empresa`, `estabelecimento`, `socios` e `simples` possuem índices para a coluna `cnpj_basico`, que é a principal chave de ligação entre elas.
+5. **Execute os scripts SQL (opcional):**
+   - Para criar as views de consulta, execute os scripts na pasta `sql/` no seu banco de dados.
 
-### Modelo de Entidade Relacionamento:
-![alt text](https://github.com/aphonsoar/Receita_Federal_do_Brasil_-_Dados_Publicos_CNPJ/blob/master/Dados_RFB_ERD.png)
+## Estrutura do Projeto
+
+- `code/`: Contém o código fonte do projeto.
+  - `cnpj_processor.py`: O script principal do pipeline de ETL.
+  - `.env_template`: Template para o arquivo de configuração de ambiente.
+- `sql/`: Contém scripts SQL para criar views no banco de dados.
+- `OUTPUT/`: Diretório padrão para os arquivos .zip baixados.
+- `EXTRACTED/`: Diretório padrão para os arquivos .csv extraídos.
+- `LICENSE`: A licença do projeto.
+- `README.md`: Este arquivo.
+- `requirements.txt`: As dependências do projeto.
