@@ -1,21 +1,36 @@
-# Web requests / downloads
-requests==2.31.0
-wget==3.2
+# Web requests / downloads otimizados
+aiohttp==3.9.1          # HTTP assíncrono para downloads paralelos
+aiofiles==23.2.1        # I/O de arquivos assíncrono
+requests==2.31.0        # Fallback para requests síncronos
 
 # HTML parsing
 beautifulsoup4==4.12.2
 lxml==4.9.3
 
-# Data handling
+# Data handling otimizado
 pandas==2.1.1
 numpy==1.27.4
+pyarrow==14.0.1         # Backend mais rápido para pandas
 
-# Database
+# Database otimizado
 SQLAlchemy==2.1.2
 psycopg2-binary==2.9.9
+
+# Monitoramento e performance
+psutil==5.9.6           # Monitoramento de sistema
+tqdm==4.66.1           # Progress bars elegantes
+memory-profiler==0.61.0 # Profiling de memória (opcional)
+
+# Paralelização
+asyncio-throttle==1.0.2 # Controle de rate limiting
 
 # Environment variables
 python-dotenv==1.0.1
 
-# Optional utilities
-tqdm==4.66.1  # caso queira progress bar mais elegante
+# Compression (para casos específicos)
+lz4==4.3.2             # Compressão rápida para cache
+zstandard==0.22.0      # Compressão eficiente
+
+# Utilities opcionais para debugging
+rich==13.7.0           # Output colorido e tabelas (opcional)
+click==8.1.7           # CLI mais avançado (opcional)
