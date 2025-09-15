@@ -4,10 +4,10 @@ import time
 import psutil
 from pathlib import Path
 
-from pipeline.downloader_optimized import run_downloads
-from pipeline.extractor_optimized import extract_files_optimized
-from pipeline.loader_optimized import load_all_optimized
-from pipeline.organizer_optimized import organize_files_optimized, group_files_by_type
+from pipeline.downloader import run_downloads
+from pipeline.extractor import extract_files_optimized
+from pipeline.loader import load_all_ultra_optimized
+from pipeline.organizer import organize_files_optimized, group_files_by_type
 from config import Config
 
 def show_system_info():

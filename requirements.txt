@@ -1,36 +1,22 @@
-# Web requests / downloads otimizados
-aiohttp==3.9.1          # HTTP assíncrono para downloads paralelos
-aiofiles==23.2.1        # I/O de arquivos assíncrono
-requests==2.31.0        # Fallback para requests síncronos
+# Manipulação de dados
+pandas==2.0.3        # Funciona com Py3.10
+numpy==1.26.2        # Funciona com Py3.10
+pyarrow==12.0.0      # 12.0.1 não está disponível p/ Py3.10, usar 12.0.0
+openpyxl==3.1.3      # Funciona
 
-# HTML parsing
-beautifulsoup4==4.12.2
-lxml==4.9.3
+# Banco de dados
+psycopg2-binary==2.9.6  # Compila melhor no Py3.10
+sqlalchemy==2.0.19      # Última compatível com Py3.10
+alembic==1.11.1          # Funciona normalmente
 
-# Data handling otimizado
-pandas==2.1.1
-numpy==1.27.4
-pyarrow==14.0.1         # Backend mais rápido para pandas
-
-# Database otimizado
-SQLAlchemy==2.1.2
-psycopg2-binary==2.9.9
-
-# Monitoramento e performance
-psutil==5.9.6           # Monitoramento de sistema
-tqdm==4.66.1           # Progress bars elegantes
-memory-profiler==0.61.0 # Profiling de memória (opcional)
-
-# Paralelização
-asyncio-throttle==1.0.2 # Controle de rate limiting
-
-# Environment variables
+# Requests / Download / ETL
+requests==2.31.0
+tqdm==4.66.1
 python-dotenv==1.0.1
 
-# Compression (para casos específicos)
-lz4==4.3.2             # Compressão rápida para cache
-zstandard==0.22.0      # Compressão eficiente
+# Performance / Multiprocessing
+psutil==5.9.6
 
-# Utilities opcionais para debugging
-rich==13.7.0           # Output colorido e tabelas (opcional)
-click==8.1.7           # CLI mais avançado (opcional)
+# Outras utilidades
+lxml==4.9.3
+beautifulsoup4==4.12.2
