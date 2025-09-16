@@ -8,7 +8,7 @@ import tempfile
 import shutil
 from tqdm import tqdm
 
-from config import Config
+from utils.config import Config
 
 class OptimizedExtractor:
     def __init__(self):

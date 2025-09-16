@@ -1,0 +1,8 @@
+# Arquivos que falharam no download
+# Execute: python retry_failed_downloads.py
+
+Estabelecimentos9.zip
+Socios6.zip
+Socios8.zip
+Estabelecimentos5.zip
+Socios7.zip

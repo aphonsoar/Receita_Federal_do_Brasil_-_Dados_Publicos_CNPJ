@@ -4,12 +4,6 @@ import time
 import psutil
 from pathlib import Path
 
-from pipeline.downloader import run_downloads
-from pipeline.extractor import extract_files_optimized
-from pipeline.loader import load_all_ultra_optimized
-from pipeline.organizer import organize_files_optimized, group_files_by_type
-from config import Config
-
 def show_system_info():
     """Mostra informações do sistema para otimização"""
     print("\n💻 INFORMAÇÕES DO SISTEMA")
@@ -33,19 +27,27 @@ def show_system_info():
     print(f"💾 Disco Livre: {disk.free / (1024**3):.1f} GB")
 
     # Configurações otimizadas calculadas
-    settings = Config.get_optimal_settings()
-    print(f"\n⚙️  CONFIGURAÇÕES OTIMIZADAS CALCULADAS")
-    print("=" * 50)
-    print(f"📦 Chunk Size: {settings['chunk_size']:,} linhas")
-    print(f"🔄 Workers I/O: {settings['io_workers']}")
-    print(f"🔄 Workers CPU: {settings['cpu_workers']}")
-    print(f"🔗 Pool Conexões DB: {settings['db_pool_size']}")
-    print(f"🧠 Limite Memória: {settings['max_memory_mb']:,} MB")
+    try:
+        from utils.config import Config
+        settings = Config.get_optimal_settings()
+        print(f"\n⚙️  CONFIGURAÇÕES OTIMIZADAS CALCULADAS")
+        print("=" * 50)
+        print(f"📦 Chunk Size: {settings['chunk_size']:,} linhas")
+        print(f"🔄 Workers I/O: {settings['io_workers']}")
+        print(f"🔄 Workers CPU: {settings['cpu_workers']}")
+        print(f"🔗 Pool Conexões DB: {settings['db_pool_size']}")
+        print(f"🧠 Limite Memória: {settings['max_memory_mb']:,} MB")
+    except ImportError as e:
+        print(f"⚠️  Erro ao carregar configurações: {e}")
     print()
 
 def ensure_directories():
     """Garante que os diretórios necessários existem"""
-    directories = [Config.OUTPUT_FILES, Config.EXTRACTED_FILES]
+    try:
+        from utils.config import Config
+        directories = [Config.OUTPUT_FILES, Config.EXTRACTED_FILES]
+    except ImportError:
+        directories = ["./downloads", "./extracted"]
 
     for directory in directories:
         Path(directory).mkdir(parents=True, exist_ok=True)
@@ -62,6 +64,56 @@ def monitor_resources():
         'system_memory_percent': psutil.virtual_memory().percent
     }
 
+def run_downloads():
+    """Função de download - importa apenas quando necessário"""
+    try:
+        from pipeline.downloader import run_downloads as actual_run_downloads
+        return actual_run_downloads()
+    except ImportError as e:
+        print(f"❌ Erro ao importar módulo de download: {e}")
+        print("💡 Verifique se o arquivo pipeline/downloader.py existe")
+        return []
+
+def extract_files_optimized():
+    """Função de extração - importa apenas quando necessário"""
+    try:
+        from pipeline.extractor import extract_files_optimized as actual_extract
+        return actual_extract()
+    except ImportError as e:
+        print(f"❌ Erro ao importar módulo de extração: {e}")
+        print("💡 Verifique se o arquivo pipeline/extractor.py existe")
+        return []
+
+def organize_files_optimized():
+    """Função de organização - importa apenas quando necessário"""
+    try:
+        from pipeline.organizer import organize_files_optimized as actual_organize
+        return actual_organize()
+    except ImportError as e:
+        print(f"❌ Erro ao importar módulo de organização: {e}")
+        print("💡 Verifique se o arquivo pipeline/organizer.py existe")
+        return {}
+
+def group_files_by_type():
+    """Função de organização simples - importa apenas quando necessário"""
+    try:
+        from pipeline.organizer import group_files_by_type as actual_group
+        return actual_group()
+    except ImportError as e:
+        print(f"❌ Erro ao importar módulo de organização: {e}")
+        print("💡 Verifique se o arquivo pipeline/organizer.py existe")
+        return {}
+
+def load_all_optimized(groups):
+    """Função de carregamento - importa apenas quando necessário"""
+    try:
+        from pipeline.loader import load_all_ultra_optimized
+        return load_all_ultra_optimized(groups)
+    except ImportError as e:
+        print(f"❌ Erro ao importar módulo de carregamento: {e}")
+        print("💡 Verifique se o arquivo pipeline/loader.py existe")
+        return False
+
 def main(args):
     """Pipeline principal otimizado"""
     start_time = time.time()
@@ -71,6 +123,14 @@ def main(args):
 
     # Mostra informações do sistema
     show_system_info()
+
+    # Se nenhum argumento específico foi passado, executa pipeline completo
+    if not any([args.download, args.extract, args.load, args.smart_organize, args.show_config]):
+        print("💡 Executando pipeline completo automaticamente...")
+        args.download = True
+        args.extract = True
+        args.load = True
+        args.smart_organize = True
 
     # 1️⃣ Garantir que os diretórios existem
     print("📁 Preparando diretórios...")
@@ -86,15 +146,18 @@ def main(args):
             results = run_downloads()
             download_time = time.time() - download_start
 
-            successful = sum(1 for r in results if r.get("status") in ["downloaded", "skipped"])
-            failed = len(results) - successful
-
-            print(f"✅ Download concluído em {download_time:.2f}s")
-            print(f"📊 Sucessos: {successful}, Falhas: {failed}")
+            if results:
+                successful = sum(1 for r in results if r.get("status") in ["downloaded", "skipped"])
+                failed = len(results) - successful
+                print(f"✅ Download concluído em {download_time:.2f}s")
+                print(f"📊 Sucessos: {successful}, Falhas: {failed}")
+            else:
+                print("⚠️  Nenhum resultado de download retornado")
 
         except Exception as e:
             print(f"❌ Erro no download: {e}")
-            return
+            if not args.extract and not args.load:
+                return
 
     # 3️⃣ Extração dos arquivos (se solicitado)
     if args.extract:
@@ -106,13 +169,17 @@ def main(args):
             results = extract_files_optimized()
             extract_time = time.time() - extract_start
 
-            successful = sum(1 for r in results if r.get("status") == "extracted")
-            print(f"✅ Extração concluída em {extract_time:.2f}s")
-            print(f"📊 Arquivos extraídos: {successful}")
+            if results:
+                successful = sum(1 for r in results if r.get("status") == "extracted")
+                print(f"✅ Extração concluída em {extract_time:.2f}s")
+                print(f"📊 Arquivos extraídos: {successful}")
+            else:
+                print("⚠️  Nenhum resultado de extração retornado")
 
         except Exception as e:
             print(f"❌ Erro na extração: {e}")
-            return
+            if not args.load:
+                return
 
     # 4️⃣ Organização e análise dos arquivos
     print("\n🔹 FASE 3: ORGANIZAÇÃO DE ARQUIVOS")
@@ -133,12 +200,18 @@ def main(args):
         total_files = sum(len(files) for files in groups.values())
         print(f"✅ Organização concluída: {total_files} arquivos classificados")
 
+        # Se não há arquivos para processar, não continua para o carregamento
+        if total_files == 0:
+            print("⚠️  Nenhum arquivo encontrado para processamento")
+            print("💡 Execute primeiro as etapas de download e extração:")
+            print("     python main.py --download --extract")
+            
     except Exception as e:
         print(f"❌ Erro na organização: {e}")
-        return
+        groups = {}
 
     # 5️⃣ Carregamento no banco de dados (se solicitado)
-    if args.load:
+    if args.load and groups and sum(len(files) for files in groups.values()) > 0:
         print("\n🔹 FASE 4: CARREGAMENTO NO BANCO")
         print("=" * 50)
         load_start = time.time()
@@ -149,7 +222,21 @@ def main(args):
               f"RAM {resources_before['memory_percent']:.1f}%")
 
         try:
-            load_all_optimized(groups)
+            # Primeiro testa a conexão
+            print("🔗 Testando conexão com banco de dados...")
+            from utils.db import test_connection, ensure_database_exists
+            
+            if not ensure_database_exists():
+                print("❌ Não foi possível verificar/criar o banco de dados")
+                return
+            
+            if not test_connection():
+                print("❌ Não foi possível conectar ao banco de dados")
+                return
+            
+            print("✅ Conexão com banco OK! Iniciando carregamento...")
+            
+            success = load_all_optimized(groups)
             load_time = time.time() - load_start
 
             # Monitora recursos após carregamento
@@ -157,11 +244,40 @@ def main(args):
             print(f"🔧 Recursos após: CPU {resources_after['cpu_percent']:.1f}%, "
                   f"RAM {resources_after['memory_percent']:.1f}%")
 
-            print(f"✅ Carregamento concluído em {load_time:.2f}s")
+            if success is not False:
+                print(f"✅ Carregamento concluído em {load_time:.2f}s")
+                
+                # Mostra estatísticas finais do banco
+                try:
+                    from utils.db import get_engine
+                    from sqlalchemy import text
+                    engine = get_engine()
+                    with engine.connect() as conn:
+                        print(f"\n📊 ESTATÍSTICAS DO BANCO:")
+                        tables = ['empresa', 'estabelecimento', 'socios', 'simples', 'cnae', 'moti', 'munic', 'natju', 'pais', 'quals']
+                        for table in tables:
+                            try:
+                                result = conn.execute(text(f"SELECT COUNT(*) FROM {table};")).fetchone()
+                                if result and result[0] > 0:
+                                    print(f"   📋 {table}: {result[0]:,} registros")
+                            except:
+                                pass
+                except Exception as e:
+                    print(f"⚠️  Erro ao obter estatísticas: {e}")
+            else:
+                print("⚠️  Carregamento apresentou problemas")
 
         except Exception as e:
             print(f"❌ Erro no carregamento: {e}")
+            print("💡 Possíveis soluções:")
+            print("   - Verifique se PostgreSQL está rodando")
+            print("   - Confirme as configurações no arquivo .env")
+            print("   - Execute: python test_config.py")
             return
+
+    elif args.load:
+        print("\n⚠️  CARREGAMENTO PULADO - Nenhum arquivo para processar")
+        print("💡 Execute primeiro: python main.py --download --extract")
 
     # 6️⃣ Relatório final
     total_time = time.time() - start_time
@@ -180,9 +296,6 @@ def main_streaming(args):
     """Pipeline alternativo com processamento streaming (experimental)"""
     print("🌊 PIPELINE STREAMING (EXPERIMENTAL)")
     print("=" * 50)
-
-    # TODO: Implementar processamento streaming direto dos ZIPs
-    # sem extração completa, para economizar espaço em disco
     print("⚠️  Pipeline streaming ainda não implementado")
     print("💡 Use o pipeline normal por enquanto")
 
@@ -193,20 +306,23 @@ if __name__ == "__main__":
         epilog="""
 Exemplos de uso:
   
-  # Pipeline completo
-  python main_optimized.py --download --extract --load
+  # Pipeline completo (padrão se nenhum argumento for passado)
+  python main.py
+  
+  # Pipeline completo explícito
+  python main.py --download --extract --load
   
   # Apenas download paralelo
-  python main_optimized.py --download
+  python main.py --download
   
   # Processar arquivos já baixados
-  python main_optimized.py --extract --load
+  python main.py --extract --load
   
   # Organização inteligente com análise detalhada
-  python main_optimized.py --smart-organize --load
+  python main.py --smart-organize --load
   
   # Apenas carregamento (arquivos já organizados)
-  python main_optimized.py --load
+  python main.py --load
         """
     )
 
@@ -237,10 +353,14 @@ Exemplos de uso:
     args = parser.parse_args()
 
     # Sobrescreve configurações se especificado
-    if args.chunk_size:
-        Config.CHUNK_SIZE = args.chunk_size
-    if args.workers:
-        Config.WORKERS = args.workers
+    try:
+        from utils.config import Config
+        if args.chunk_size:
+            Config.CHUNK_SIZE = args.chunk_size
+        if args.workers:
+            Config.WORKERS = args.workers
+    except ImportError:
+        pass
 
     # Apenas mostra configurações
     if args.show_config:

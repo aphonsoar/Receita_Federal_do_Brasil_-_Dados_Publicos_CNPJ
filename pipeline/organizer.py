@@ -5,7 +5,7 @@ from typing import Dict, List, Tuple
 from collections import defaultdict
 import time
 
-from config import Config
+from utils.config import Config
 
 class SmartOrganizer:
     """Organizador inteligente que classifica e prioriza arquivos"""
